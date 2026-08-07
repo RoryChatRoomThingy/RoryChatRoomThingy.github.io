@@ -560,3 +560,21 @@ function isAudioFile(type = '', name = '') {
     await window.supabaseClient.from('messages').insert([payload]);
   };
 })();
+
+// Add any words you want to flag here (case-insensitive)
+const FLAGGED_WORDS = ['badword', 'fool', 'spam', 'hate', 'testbadword'];
+
+function censorContent(text) {
+  if (!text) return text;
+
+  // Option A: If ANY flagged word is found, replace the ENTIRE message with [redacted]
+  const containsFlaggedWord = FLAGGED_WORDS.some((word) =>
+    new RegExp(`\\b${word}\\b`, 'gi').test(text)
+  );
+
+  if (containsFlaggedWord) {
+    return '<span class="redacted-text">[redacted]</span>';
+  }
+
+  return text;
+}
