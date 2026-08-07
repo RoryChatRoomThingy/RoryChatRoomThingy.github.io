@@ -4,7 +4,7 @@
     if (!grid) return;
     grid.innerHTML = '';
 
-    for (const [code, path] of Object.entries(window.EMOTES)) {
+    for (const [code, path] of Object.entries(window.EMOTES || {})) {
       const item = document.createElement('div');
       item.className = 'emote-grid-item';
       item.title = code;
@@ -27,15 +27,25 @@
   window.selectEmote = function selectEmote(code) {
     const input = document.getElementById('msg-input');
     if (!input) return;
-    // Add emote code to input and re-focus
     input.value += (input.value.length > 0 && !input.value.endsWith(' ') ? ' ' : '') + code + ' ';
     input.focus();
-    
-    // REMOVED: picker.style.display = 'none'; 
-    // Now the menu stays open when you click an emote!
   };
 
-  // Close when clicking outside of the picker (this is untouched and still works)
+  // What's New Popup Trigger Functions
+  window.showWhatsNew = function showWhatsNew() {
+    const modal = document.getElementById('whats-new-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+    }
+  };
+
+  window.closeWhatsNew = function closeWhatsNew() {
+    const modal = document.getElementById('whats-new-modal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  };
+
   document.addEventListener('click', (e) => {
     const picker = document.getElementById('emote-picker');
     const toggleBtn = document.querySelector('.emote-toggle-btn');
