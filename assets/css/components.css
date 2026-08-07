@@ -152,8 +152,7 @@
   color: var(--interactive-hover);
 }
 
-.audio-picker-popover,
-.emote-picker-popover {
+.audio-picker-popover {
   position: absolute;
   bottom: 80px;
   right: 16px;
@@ -197,6 +196,7 @@
   border-radius: 4px;
 }
 
+/* Emote Picker Container */
 .emote-picker-popover {
   position: absolute;
   bottom: 80px;
@@ -207,10 +207,16 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   padding: 12px;
   width: 320px;
-  max-height: 280px;
-  overflow-y: auto;
   display: none;
   z-index: 100;
+}
+
+/* Emote Picker Header & Title */
+.emote-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .emote-picker-title {
@@ -218,13 +224,47 @@
   font-weight: 700;
   text-transform: uppercase;
   color: var(--text-muted);
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
+.close-picker-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #949BA4);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-picker-btn:hover {
+  color: var(--text-normal, #DBDEE1);
+}
+
+/* Scrollable Emote Grid */
 .emote-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.emote-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.emote-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.emote-grid::-webkit-scrollbar-thumb {
+  background-color: var(--bg-tertiary, #1a1b1e);
+  border-radius: 4px;
 }
 
 .emote-grid-item {
@@ -309,39 +349,10 @@
   background: #4752C4;
 }
 
-/* Emote Picker Header & Close Button */
-.emote-picker-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.emote-picker-title {
-  margin-bottom: 0; /* overrides the old margin */
-}
-
-.close-picker-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted, #949BA4);
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-picker-btn:hover {
-  color: var(--text-normal, #DBDEE1);
-}
-
 /* Discord Blue Ping (Mention) Styling */
 .mention {
-  background-color: rgba(88, 101, 242, 0.3); /* Discord Blurple with 30% opacity */
-  color: #c9cdfb; /* Soft bright blue text */
+  background-color: rgba(88, 101, 242, 0.3);
+  color: #c9cdfb;
   padding: 0 4px;
   border-radius: 3px;
   font-weight: 500;
@@ -350,7 +361,7 @@
 }
 
 .mention:hover {
-  background-color: #5865F2; /* Solid Blurple on hover */
+  background-color: #5865F2;
   color: #ffffff;
 }
 
