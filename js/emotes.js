@@ -9,6 +9,8 @@ window.EMOTES = {
   ':despair:': 'assets/gifs/despair.gif',
   ':mood:': 'assets/gifs/mood.gif',
   ':sans:': 'assets/gifs/sans.gif',
+  ':kris:': 'assets/gifs/kris-deltarune.gif',
+  ':sans2:': 'assets/gifs/sans-undertale.gif',
   ':silly:': 'assets/gifs/silly.gif',
   ':shadow:': 'assets/gifs/shadow.gif'
 };
