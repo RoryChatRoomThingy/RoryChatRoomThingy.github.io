@@ -442,43 +442,49 @@ function isAudioFile(type = '', name = '') {
   };
 
   function renderMessage(msg) {
-    const list = document.getElementById('messages-list');
-    if (!list) return;
+  const list = document.getElementById('messages-list');
+  if (!list) return;
 
-    const div = document.createElement('div');
-    const shouldHighlight = isMessageMentionedForCurrentUser(msg) && msg.sender_id !== window.currentUser?.id;
-    div.className = shouldHighlight ? 'msg msg-mentioned' : 'msg';
+  const div = document.createElement('div');
+  const shouldHighlight = isMessageMentionedForCurrentUser(msg) && msg.sender_id !== window.currentUser?.id;
+  div.className = shouldHighlight ? 'msg msg-mentioned' : 'msg';
 
-    try {
-      if (shouldHighlight && typeof window.playSoundEffect === 'function') {
-        window.playSoundEffect('mention');
-      }
-    } catch (e) {
-      console.warn('Failed to play mention sound', e);
+  try {
+    if (shouldHighlight && typeof window.playSoundEffect === 'function') {
+      window.playSoundEffect('mention');
     }
-
-    const cleanAvatarUrl = resolveAvatarUrl(msg.avatar_url || 'assets/icons/avatars/user1.png');
-    const displayName = msg.display_name || msg.sender_email || 'User';
-    const attachment = parseAttachment(msg.content || '');
-    const plainTextContent = stripAttachmentFromContent(msg.content || '');
-    const formattedContent = typeof window.parseEmotes === 'function' ? window.parseEmotes(plainTextContent) : plainTextContent;
-
-    const highlightedContent = formattedContent.replace(/@\(([^)]+)\)/g, '<span class="mention-chip">$&</span>');
-    const attachmentMarkup = renderAttachmentMarkup(attachment);
-
-    div.innerHTML = `
-      <img class="msg-avatar" src="${cleanAvatarUrl}" alt="pfp" onerror="this.onerror=null; this.src='assets/icons/avatars/user1.png'" />
-      <div class="msg-content">
-        <div class="msg-user">${escapeHtml(displayName)}</div>
-        ${highlightedContent ? `<div class="msg-text">${highlightedContent}</div>` : ''}
-        ${attachmentMarkup ? `<div class="msg-attachment-wrap">${attachmentMarkup}</div>` : ''}
-      </div>
-    `;
-
-    list.appendChild(div);
-    attachAudioAttachmentHandlers();
-    list.scrollTop = list.scrollHeight;
+  } catch (e) {
+    console.warn('Failed to play mention sound', e);
   }
+
+  const cleanAvatarUrl = resolveAvatarUrl(msg.avatar_url || 'assets/icons/avatars/user1.png');
+  const displayName = msg.display_name || msg.sender_email || 'User';
+  const attachment = parseAttachment(msg.content || '');
+  
+  // 1. Get plain text from message
+  const rawText = stripAttachmentFromContent(msg.content || '');
+  
+  // 2. Run through the censor filter
+  const plainTextContent = censorContent(rawText);
+  
+  // 3. Parse emotes & mentions
+  const formattedContent = typeof window.parseEmotes === 'function' ? window.parseEmotes(plainTextContent) : plainTextContent;
+  const highlightedContent = formattedContent.replace(/@\(([^)]+)\)/g, '<span class="mention-chip">$&</span>');
+  const attachmentMarkup = renderAttachmentMarkup(attachment);
+
+  div.innerHTML = `
+    <img class="msg-avatar" src="${cleanAvatarUrl}" alt="pfp" onerror="this.onerror=null; this.src='assets/icons/avatars/user1.png'" />
+    <div class="msg-content">
+      <div class="msg-user">${escapeHtml(displayName)}</div>
+      ${highlightedContent ? `<div class="msg-text">${highlightedContent}</div>` : ''}
+      ${attachmentMarkup ? `<div class="msg-attachment-wrap">${attachmentMarkup}</div>` : ''}
+    </div>
+  `;
+
+  list.appendChild(div);
+  attachAudioAttachmentHandlers();
+  list.scrollTop = list.scrollHeight;
+}
 
   window.renderMessage = renderMessage;
 
