@@ -83,13 +83,10 @@
             <input type="text" id="msg-input" placeholder="Message..." oninput="window.handleTypingInput()" onkeydown="if(event.key === 'Enter') window.sendMessage()" />
 
             <button type="button" class="emote-toggle-btn" onclick="toggleEmotePicker(event)" title="Open Emote Picker">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
-                <line x1="9" y1="9" x2="9.01" y2="9"></line>
-                <line x1="15" y1="9" x2="15.01" y2="9"></line>
-              </svg>
-            </button>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM8.5 9.5C7.67157 9.5 7 10.1716 7 11C7 11.8284 7.67157 12.5 8.5 12.5C9.32843 12.5 10 11.8284 10 11C10 10.1716 9.32843 9.5 8.5 9.5ZM15.5 9.5C14.6716 9.5 14 10.1716 14 11C14 11.8284 14.6716 12.5 15.5 12.5C16.3284 12.5 17 11.8284 17 11C17 10.1716 16.3284 9.5 15.5 9.5ZM12 17.5C14.33 17.5 16.27 16.04 17 14H7C7.73 16.04 9.67 17.5 12 17.5Z" />
+  </svg>
+</button>
           </div>
 
         </div>
