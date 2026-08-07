@@ -1,13 +1,22 @@
 (function () {
   async function initApp() {
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('chat-screen').style.display = 'block';
+    const authScreen = document.getElementById('auth-screen');
+    const chatScreen = document.getElementById('chat-screen');
+    if (authScreen) authScreen.style.display = 'none';
+    if (chatScreen) chatScreen.style.display = 'flex';
 
-    window.renderEmotePicker();
+    if (window.renderEmotePicker) window.renderEmotePicker();
     if (window.renderAudioPicker) window.renderAudioPicker();
-    await window.loadUsersList();
-    await window.loadMessages();
-    window.setupRealtime();
+
+    // Default to main server on load so channel messages show right away
+    if (window.switchToContext) {
+      window.switchToContext('server');
+    } else {
+      if (window.loadUsersList) await window.loadUsersList();
+      if (window.loadMessages) await window.loadMessages();
+    }
+
+    if (window.setupRealtime) window.setupRealtime();
   }
 
   window.initApp = initApp;
