@@ -73,41 +73,50 @@
   }
 
   function renderAttachmentMarkup(attachment) {
-    if (!attachment) return '';
+  if (!attachment) return '';
 
-    const safeName = escapeHtml(attachment.name || 'Attachment');
-    const safeUrl = escapeHtml(attachment.dataUrl || '');
+  const safeName = escapeHtml(attachment.name || 'Audio Attachment');
+  const safeUrl = escapeHtml(attachment.dataUrl || '');
 
-    if (attachment.type?.startsWith('image/')) {
-      return `<img class="msg-attachment-img" src="${safeUrl}" alt="${safeName}" />`;
-    }
+  if (attachment.type?.startsWith('image/')) {
+    return `<img class="msg-attachment-img" src="${safeUrl}" alt="${safeName}" />`;
+  }
 
-    if (attachment.type?.startsWith('audio/')) {
-      return `
+  // Audio attachment inline player card
+  if (attachment.type?.startsWith('audio/')) {
+    return `
+      <div class="msg-audio-player-card">
         <button class="msg-attachment-audio" type="button" aria-label="Play audio attachment" data-audio-url="${safeUrl}">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <svg class="play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M8 5v14l11-7z"></path>
           </svg>
+          <svg class="pause-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
+          </svg>
         </button>
-      `;
-    }
-
-    return `<a class="msg-attachment-file" href="${safeUrl}" download="${safeName}" target="_blank">📎 ${safeName}</a>`;
+        <span class="msg-audio-name">${safeName}</span>
+      </div>
+    `;
   }
+
+  return `<a class="msg-attachment-file" href="${safeUrl}" download="${safeName}" target="_blank">📎 ${safeName}</a>`;
+}
 
   function attachAudioAttachmentHandlers() {
-    document.querySelectorAll('.msg-attachment-audio').forEach((button) => {
-      button.addEventListener('click', () => {
-        const audioUrl = button.dataset.audioUrl;
-        if (!audioUrl) return;
+  document.querySelectorAll('.msg-attachment-audio').forEach((button) => {
+    if (button.dataset.listenerAttached) return;
+    button.dataset.listenerAttached = 'true';
 
-        const audio = new Audio(audioUrl);
-        audio.play().catch(() => {
-          console.warn('Unable to play audio attachment.');
-        });
-      });
+    button.addEventListener('click', () => {
+      const audioUrl = button.dataset.audioUrl;
+      if (!audioUrl) return;
+
+      if (typeof window.toggleAudioPlayback === 'function') {
+        window.toggleAudioPlayback(button, audioUrl);
+      }
     });
-  }
+  });
+}
 
   function getMentionedUsers(text = '') {
     if (!text || !window.allProfiles?.length) return [];
