@@ -567,7 +567,7 @@ function isAudioFile(type = '', name = '') {
   };
 })();
 
-const FLAGGED_WORDS = ['gaster', 'green', 'WDGaster', 'boo', '?'];
+const FLAGGED_WORDS = ['gaster', 'green', 'WDGaster'];
 
 // Helper to escape special regex characters like '?' or '*'
 function escapeRegExp(string) {
