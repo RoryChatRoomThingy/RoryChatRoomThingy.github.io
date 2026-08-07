@@ -4,7 +4,7 @@
 
   window.currentUser = null;
   window.currentProfile = null;
-  window.currentContext = { type: 'dm', targetId: null, name: 'Direct Messages' };
+  window.currentContext = { type: 'server', targetId: 'main-server', name: 'Main Server' };
   window.allProfiles = [];
   window.chatChannel = null;
 
@@ -72,7 +72,7 @@
     return `${content.slice(0, markerStart)}${content.slice(markerEnd + 2)}`.trim();
   }
 
-function isAudioFile(type = '', name = '') {
+  function isAudioFile(type = '', name = '') {
     if (type && type.startsWith('audio/')) return true;
     const lowerName = String(name).toLowerCase();
     return /\.(mp3|wav|ogg|m4a|aac|webm|flac)$/i.test(lowerName);
@@ -84,7 +84,6 @@ function isAudioFile(type = '', name = '') {
     const safeName = escapeHtml(attachment.name || 'Attachment');
     const safeUrl = escapeHtml(attachment.dataUrl || '');
 
-    // Catch local system paths to prevent browser Security Errors
     if (safeUrl.startsWith('file:///')) {
       return `<div class="msg-attachment-file">⚠️ Invalid local file reference</div>`;
     }
@@ -93,7 +92,6 @@ function isAudioFile(type = '', name = '') {
       return `<img class="msg-attachment-img" src="${safeUrl}" alt="${safeName}" />`;
     }
 
-    // Audio attachment inline player card (supports MP3, WAV, M4A, OGG, WEBM)
     if (isAudioFile(attachment.type, attachment.name)) {
       return `
         <div class="msg-audio-player-card">
@@ -301,7 +299,7 @@ function isAudioFile(type = '', name = '') {
 
     channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
       const msg = payload.new;
-      if (window.currentContext.type === 'server' && !msg.is_dm) {
+      if (window.currentContext.type === 'server' && (!msg.is_dm || msg.is_dm === false)) {
         renderMessage(msg);
       } else if (
         window.currentContext.type === 'dm' &&
@@ -426,7 +424,8 @@ function isAudioFile(type = '', name = '') {
     let query = window.supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
 
     if (window.currentContext.type === 'server') {
-      query = query.eq('is_dm', false);
+      // Fetch server messages including old ones where is_dm is null
+      query = query.or('is_dm.eq.false,is_dm.is.null');
     } else if (!window.currentContext.targetId) {
       const emptyState = document.createElement('div');
       emptyState.className = 'empty-state';
@@ -437,54 +436,58 @@ function isAudioFile(type = '', name = '') {
       query = query.eq('is_dm', true).or(`and(sender_id.eq.${window.currentUser.id},receiver_id.eq.${window.currentContext.targetId}),and(sender_id.eq.${window.currentContext.targetId},receiver_id.eq.${window.currentUser.id})`);
     }
 
-    const { data: messages } = await query;
+    const { data: messages, error } = await query;
+    if (error) {
+      console.error('Error loading messages:', error);
+      return;
+    }
     if (messages) messages.forEach(renderMessage);
   };
 
   function renderMessage(msg) {
-  const list = document.getElementById('messages-list');
-  if (!list) return;
+    const list = document.getElementById('messages-list');
+    if (!list) return;
 
-  const div = document.createElement('div');
-  const shouldHighlight = isMessageMentionedForCurrentUser(msg) && msg.sender_id !== window.currentUser?.id;
-  div.className = shouldHighlight ? 'msg msg-mentioned' : 'msg';
+    const div = document.createElement('div');
+    const shouldHighlight = isMessageMentionedForCurrentUser(msg) && msg.sender_id !== window.currentUser?.id;
+    div.className = shouldHighlight ? 'msg msg-mentioned' : 'msg';
 
-  try {
-    if (shouldHighlight && typeof window.playSoundEffect === 'function') {
-      window.playSoundEffect('mention');
+    try {
+      if (shouldHighlight && typeof window.playSoundEffect === 'function') {
+        window.playSoundEffect('mention');
+      }
+    } catch (e) {
+      console.warn('Failed to play mention sound', e);
     }
-  } catch (e) {
-    console.warn('Failed to play mention sound', e);
+
+    const cleanAvatarUrl = resolveAvatarUrl(msg.avatar_url || 'assets/icons/avatars/user1.png');
+    const displayName = msg.display_name || msg.sender_email || 'User';
+    const attachment = parseAttachment(msg.content || '');
+    
+    // 1. Get plain text
+    const rawText = stripAttachmentFromContent(msg.content || '');
+    
+    // 2. Run through the censor filter
+    const plainTextContent = typeof window.censorContent === 'function' ? window.censorContent(rawText) : rawText;
+    
+    // 3. Parse emotes & mentions
+    const formattedContent = typeof window.parseEmotes === 'function' ? window.parseEmotes(plainTextContent) : plainTextContent;
+    const highlightedContent = formattedContent.replace(/@\(([^)]+)\)/g, '<span class="mention-chip">$&</span>');
+    const attachmentMarkup = renderAttachmentMarkup(attachment);
+
+    div.innerHTML = `
+      <img class="msg-avatar" src="${cleanAvatarUrl}" alt="pfp" onerror="this.onerror=null; this.src='assets/icons/avatars/user1.png'" />
+      <div class="msg-content">
+        <div class="msg-user">${escapeHtml(displayName)}</div>
+        ${highlightedContent ? `<div class="msg-text">${highlightedContent}</div>` : ''}
+        ${attachmentMarkup ? `<div class="msg-attachment-wrap">${attachmentMarkup}</div>` : ''}
+      </div>
+    `;
+
+    list.appendChild(div);
+    attachAudioAttachmentHandlers();
+    list.scrollTop = list.scrollHeight;
   }
-
-  const cleanAvatarUrl = resolveAvatarUrl(msg.avatar_url || 'assets/icons/avatars/user1.png');
-  const displayName = msg.display_name || msg.sender_email || 'User';
-  const attachment = parseAttachment(msg.content || '');
-  
-  // 1. Get plain text from message
-  const rawText = stripAttachmentFromContent(msg.content || '');
-  
-  // 2. Run through the censor filter
-  const plainTextContent = censorContent(rawText);
-  
-  // 3. Parse emotes & mentions
-  const formattedContent = typeof window.parseEmotes === 'function' ? window.parseEmotes(plainTextContent) : plainTextContent;
-  const highlightedContent = formattedContent.replace(/@\(([^)]+)\)/g, '<span class="mention-chip">$&</span>');
-  const attachmentMarkup = renderAttachmentMarkup(attachment);
-
-  div.innerHTML = `
-    <img class="msg-avatar" src="${cleanAvatarUrl}" alt="pfp" onerror="this.onerror=null; this.src='assets/icons/avatars/user1.png'" />
-    <div class="msg-content">
-      <div class="msg-user">${escapeHtml(displayName)}</div>
-      ${highlightedContent ? `<div class="msg-text">${highlightedContent}</div>` : ''}
-      ${attachmentMarkup ? `<div class="msg-attachment-wrap">${attachmentMarkup}</div>` : ''}
-    </div>
-  `;
-
-  list.appendChild(div);
-  attachAudioAttachmentHandlers();
-  list.scrollTop = list.scrollHeight;
-}
 
   window.renderMessage = renderMessage;
 
@@ -493,9 +496,7 @@ function isAudioFile(type = '', name = '') {
     const file = input?.files?.[0];
 
     if (!file || !window.currentUser) {
-      if (!window.currentUser) {
-        alert('Please sign in before uploading a file.');
-      }
+      if (!window.currentUser) alert('Please sign in before uploading a file.');
       return;
     }
 
@@ -504,103 +505,4 @@ function isAudioFile(type = '', name = '') {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
         reader.onerror = () => reject(new Error('Unable to read selected file.'));
-        reader.readAsDataURL(file);
-      });
-
-      const attachment = {
-        type: file.type || 'application/octet-stream',
-        name: file.name || 'attachment',
-        dataUrl
-      };
-
-      await window.sendMessage(attachment);
-    } catch (error) {
-      console.error('Failed to upload attachment:', error);
-      alert('Unable to attach this file right now.');
-    } finally {
-      if (input) input.value = '';
-    }
-  };
-
-  window.sendMessage = async function sendMessage(attachment = null) {
-    const input = document.getElementById('msg-input');
-    if (!input || !window.currentUser) return;
-
-    const content = input.value.trim();
-    const finalContent = buildAttachmentPayload(content, attachment);
-    if (!finalContent.trim() && !attachment) return;
-
-    input.value = '';
-    const picker = document.getElementById('emote-picker');
-    if (picker) picker.style.display = 'none';
-
-    if (typingTimeout) clearTimeout(typingTimeout);
-    if (window.chatChannel) {
-      window.chatChannel.send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: {
-          userId: window.currentUser.id,
-          userName: window.currentProfile?.display_name || window.currentUser.email.split('@')[0],
-          contextType: window.currentContext.type,
-          targetId: window.currentContext.targetId,
-          isTyping: false
-        }
-      });
-    }
-
-    hideMentionSuggestions();
-
-    const isDM = window.currentContext.type === 'dm';
-    const payload = {
-      sender_id: window.currentUser.id,
-      sender_email: window.currentUser.email,
-      display_name: window.currentProfile?.display_name,
-      avatar_url: window.currentProfile?.avatar_url,
-      content: finalContent,
-      is_dm: isDM,
-      receiver_id: isDM ? window.currentContext.targetId : null,
-      server_id: isDM ? null : 'main-server'
-    };
-
-    await window.supabaseClient.from('messages').insert([payload]);
-  };
-})();
-
-const FLAGGED_WORDS = ['gaster', 'green', 'WDGaster'];
-
-// Helper to escape special regex characters like '?' or '*'
-function escapeRegExp(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function censorContent(text) {
-  if (!text) return text;
-
-  // 1. Create a "cleaned" string with all spaces, dots, dashes, and underscores removed
-  // e.g. "g a s t e r" or "g.a.s.t.e.r" becomes "gaster"
-  const normalizedText = text.replace(/[\s\._\-]+/g, '').toLowerCase();
-
-  // 2. Check both the original text and the normalized text
-  const containsFlaggedWord = FLAGGED_WORDS.some((word) => {
-    if (!word) return false;
-
-    const lowerWord = word.toLowerCase();
-
-    // Check if the spaced-out/normalized version contains the bad word
-    if (normalizedText.includes(lowerWord)) {
-      return true;
-    }
-
-    // Check original text with exact word boundary matching for standard words
-    const escaped = escapeRegExp(word);
-    const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
-    return regex.test(text);
-  });
-
-  if (containsFlaggedWord) {
-    return '<span class="redacted-text">[redacted]</span>';
-  }
-
-  return text;
-}
+        reader.read
