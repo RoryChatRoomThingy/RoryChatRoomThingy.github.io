@@ -505,4 +505,97 @@
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
         reader.onerror = () => reject(new Error('Unable to read selected file.'));
-        reader.read
+        reader.readAsDataURL(file);
+      });
+
+      const attachment = {
+        type: file.type || 'application/octet-stream',
+        name: file.name || 'attachment',
+        dataUrl
+      };
+
+      await window.sendMessage(attachment);
+    } catch (error) {
+      console.error('Failed to upload attachment:', error);
+      alert('Unable to attach this file right now.');
+    } finally {
+      if (input) input.value = '';
+    }
+  };
+
+  window.sendMessage = async function sendMessage(attachment = null) {
+    const input = document.getElementById('msg-input');
+    if (!input || !window.currentUser) return;
+
+    const content = input.value.trim();
+    const finalContent = buildAttachmentPayload(content, attachment);
+    if (!finalContent.trim() && !attachment) return;
+
+    input.value = '';
+    const picker = document.getElementById('emote-picker');
+    if (picker) picker.style.display = 'none';
+
+    if (typingTimeout) clearTimeout(typingTimeout);
+    if (window.chatChannel) {
+      window.chatChannel.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: {
+          userId: window.currentUser.id,
+          userName: window.currentProfile?.display_name || window.currentUser.email.split('@')[0],
+          contextType: window.currentContext.type,
+          targetId: window.currentContext.targetId,
+          isTyping: false
+        }
+      });
+    }
+
+    hideMentionSuggestions();
+
+    const isDM = window.currentContext.type === 'dm';
+    const payload = {
+      sender_id: window.currentUser.id,
+      sender_email: window.currentUser.email,
+      display_name: window.currentProfile?.display_name,
+      avatar_url: window.currentProfile?.avatar_url,
+      content: finalContent,
+      is_dm: isDM,
+      receiver_id: isDM ? window.currentContext.targetId : null,
+      server_id: isDM ? null : 'main-server'
+    };
+
+    await window.supabaseClient.from('messages').insert([payload]);
+  };
+})();
+
+// Censor filter helpers globally registered
+const FLAGGED_WORDS = ['gaster', 'green', 'WDGaster'];
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+window.censorContent = function censorContent(text) {
+  if (!text) return text;
+
+  const normalizedText = text.replace(/[\s\._\-]+/g, '').toLowerCase();
+
+  const containsFlaggedWord = FLAGGED_WORDS.some((word) => {
+    if (!word) return false;
+    const lowerWord = word.toLowerCase();
+
+    if (normalizedText.includes(lowerWord)) {
+      return true;
+    }
+
+    const escaped = escapeRegExp(word);
+    const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
+    return regex.test(text);
+  });
+
+  if (containsFlaggedWord) {
+    return '<span class="redacted-text">[redacted]</span>';
+  }
+
+  return text;
+};
