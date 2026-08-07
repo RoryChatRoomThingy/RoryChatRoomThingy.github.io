@@ -23,9 +23,9 @@
       if (window.updateUserControls) window.updateUserControls();
       if (window.initApp) await window.initApp();
 
-      // Trigger "What's New" modal on active session load
-      if (typeof showWhatsNew === 'function') {
-        showWhatsNew();
+      // Trigger "What's New" popup modal
+      if (typeof window.showWhatsNew === 'function') {
+        window.showWhatsNew();
       }
     } else {
       const authScreen = document.getElementById('auth-screen');
@@ -62,9 +62,9 @@
     if (window.updateUserControls) window.updateUserControls();
     if (window.initApp) await window.initApp();
 
-    // Trigger "What's New" modal on manual login success
-    if (typeof showWhatsNew === 'function') {
-      showWhatsNew();
+    // Trigger "What's New" popup modal
+    if (typeof window.showWhatsNew === 'function') {
+      window.showWhatsNew();
     }
   };
 
