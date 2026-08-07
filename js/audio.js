@@ -1,82 +1,79 @@
 (function () {
-  window.SOUND_EFFECTS = {};
+  let currentAudio = null;
+  let currentButton = null;
 
-  window.toggleAudioPicker = function toggleAudioPicker(e) {
-    if (e) e.stopPropagation();
-    const picker = document.getElementById('audio-picker');
-    const otherPicker = document.getElementById('emote-picker');
-    if (otherPicker) otherPicker.style.display = 'none';
-    if (picker) picker.style.display = 'none';
-  };
+  // Toggle play/pause state for audio attachments inside chat messages
+  window.toggleAudioPlayback = function (button, audioUrl) {
+    if (!audioUrl) return;
 
-  window.renderAudioPicker = function renderAudioPicker() {
-    const grid = document.getElementById('audio-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-  };
-
-  // Preload basic sound effects. Use existing files in assets/soundclip.
-  (function initSoundEffects() {
-    try {
-      const base = 'assets/soundclip/';
-      const list = {
-        mention: `${base}cancel.mp3`
-      };
-
-      Object.keys(list).forEach((key) => {
-        const audio = new Audio(list[key]);
-        audio.preload = 'auto';
-        audio.volume = 0.8;
-        audio.load();
-        window.SOUND_EFFECTS[key] = audio;
-      });
-    } catch (e) {
-      console.warn('Failed to init sound effects', e);
-    }
-  })();
-
-  // Try to unlock audio on first user gesture (many browsers block autoplay otherwise).
-  let _audioUnlocked = false;
-  function _unlockAudioOnce() {
-    if (_audioUnlocked) return;
-    _audioUnlocked = true;
-    Object.values(window.SOUND_EFFECTS).forEach((a) => {
-      try {
-        // Play then immediately pause to unlock playback on some browsers.
-        const p = a.play();
-        if (p && p.then) {
-          p.then(() => { a.pause(); a.currentTime = 0; }).catch(() => { /* ignore */ });
-        }
-      } catch (err) {
-        // ignore
+    // If clicking the button of the currently active audio
+    if (currentAudio && currentButton === button) {
+      if (currentAudio.paused) {
+        currentAudio.play();
+        setButtonState(button, true);
+      } else {
+        currentAudio.pause();
+        setButtonState(button, false);
       }
-    });
-    document.removeEventListener('click', _unlockAudioOnce);
-  }
-  document.addEventListener('click', _unlockAudioOnce, { once: true });
+      return;
+    }
 
-  window.playSoundEffect = function playSoundEffect(name = 'mention') {
-    try {
-      const audio = window.SOUND_EFFECTS[name];
-      if (!audio) return false;
-      // reset to start in case the sound was recently played
-      try { audio.currentTime = 0; } catch (e) { /* ignore */ }
-      const p = audio.play();
-      if (p && p.catch) p.catch((err) => {
-        console.warn('Audio play failed:', err);
-      });
-      return true;
-    } catch (e) {
-      console.warn('playSoundEffect error', e);
-      return false;
+    // Stop any currently playing audio across the site before starting new track
+    window.stopAllAudio();
+
+    // Initialize and play new audio track
+    const audio = new Audio(audioUrl);
+    currentAudio = audio;
+    currentButton = button;
+
+    setButtonState(button, true);
+
+    audio.play().catch((err) => {
+      console.warn('Audio playback error:', err);
+      setButtonState(button, false);
+      resetCurrent();
+    });
+
+    // Reset button icon when track finishes
+    audio.onended = () => {
+      setButtonState(button, false);
+      resetCurrent();
+    };
+
+    audio.onerror = () => {
+      setButtonState(button, false);
+      resetCurrent();
+    };
+  };
+
+  window.stopAllAudio = function () {
+    if (currentAudio) {
+      currentAudio.pause();
+      if (currentButton) {
+        setButtonState(currentButton, false);
+      }
+      resetCurrent();
     }
   };
 
-  document.addEventListener('click', (e) => {
-    const picker = document.getElementById('audio-picker');
-    const toggleBtn = document.querySelector('.audio-toggle-btn');
-    if (picker && !picker.contains(e.target) && e.target !== toggleBtn) {
-      picker.style.display = 'none';
+  function resetCurrent() {
+    currentAudio = null;
+    currentButton = null;
+  }
+
+  function setButtonState(button, isPlaying) {
+    if (!button) return;
+    const playIcon = button.querySelector('.play-icon');
+    const pauseIcon = button.querySelector('.pause-icon');
+
+    if (isPlaying) {
+      button.classList.add('playing');
+      if (playIcon) playIcon.style.display = 'none';
+      if (pauseIcon) pauseIcon.style.display = 'block';
+    } else {
+      button.classList.remove('playing');
+      if (playIcon) playIcon.style.display = 'block';
+      if (pauseIcon) pauseIcon.style.display = 'none';
     }
-  });
+  }
 })();
