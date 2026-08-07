@@ -72,51 +72,62 @@
     return `${content.slice(0, markerStart)}${content.slice(markerEnd + 2)}`.trim();
   }
 
+function isAudioFile(type = '', name = '') {
+    if (type && type.startsWith('audio/')) return true;
+    const lowerName = String(name).toLowerCase();
+    return /\.(mp3|wav|ogg|m4a|aac|webm|flac)$/i.test(lowerName);
+  }
+
   function renderAttachmentMarkup(attachment) {
-  if (!attachment) return '';
+    if (!attachment) return '';
 
-  const safeName = escapeHtml(attachment.name || 'Audio Attachment');
-  const safeUrl = escapeHtml(attachment.dataUrl || '');
+    const safeName = escapeHtml(attachment.name || 'Attachment');
+    const safeUrl = escapeHtml(attachment.dataUrl || '');
 
-  if (attachment.type?.startsWith('image/')) {
-    return `<img class="msg-attachment-img" src="${safeUrl}" alt="${safeName}" />`;
+    // Catch local system paths to prevent browser Security Errors
+    if (safeUrl.startsWith('file:///')) {
+      return `<div class="msg-attachment-file">⚠️ Invalid local file reference</div>`;
+    }
+
+    if (attachment.type?.startsWith('image/')) {
+      return `<img class="msg-attachment-img" src="${safeUrl}" alt="${safeName}" />`;
+    }
+
+    // Audio attachment inline player card (supports MP3, WAV, M4A, OGG, WEBM)
+    if (isAudioFile(attachment.type, attachment.name)) {
+      return `
+        <div class="msg-audio-player-card">
+          <button class="msg-attachment-audio" type="button" aria-label="Play audio attachment" data-audio-url="${safeUrl}">
+            <svg class="play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"></path>
+            </svg>
+            <svg class="pause-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
+            </svg>
+          </button>
+          <span class="msg-audio-name">${safeName}</span>
+        </div>
+      `;
+    }
+
+    return `<a class="msg-attachment-file" href="${safeUrl}" download="${safeName}" target="_blank">📎 ${safeName}</a>`;
   }
-
-  // Audio attachment inline player card
-  if (attachment.type?.startsWith('audio/')) {
-    return `
-      <div class="msg-audio-player-card">
-        <button class="msg-attachment-audio" type="button" aria-label="Play audio attachment" data-audio-url="${safeUrl}">
-          <svg class="play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z"></path>
-          </svg>
-          <svg class="pause-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
-            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
-          </svg>
-        </button>
-        <span class="msg-audio-name">${safeName}</span>
-      </div>
-    `;
-  }
-
-  return `<a class="msg-attachment-file" href="${safeUrl}" download="${safeName}" target="_blank">📎 ${safeName}</a>`;
-}
 
   function attachAudioAttachmentHandlers() {
-  document.querySelectorAll('.msg-attachment-audio').forEach((button) => {
-    if (button.dataset.listenerAttached) return;
-    button.dataset.listenerAttached = 'true';
+    document.querySelectorAll('.msg-attachment-audio').forEach((button) => {
+      if (button.dataset.listenerAttached) return;
+      button.dataset.listenerAttached = 'true';
 
-    button.addEventListener('click', () => {
-      const audioUrl = button.dataset.audioUrl;
-      if (!audioUrl) return;
+      button.addEventListener('click', () => {
+        const audioUrl = button.dataset.audioUrl;
+        if (!audioUrl) return;
 
-      if (typeof window.toggleAudioPlayback === 'function') {
-        window.toggleAudioPlayback(button, audioUrl);
-      }
+        if (typeof window.toggleAudioPlayback === 'function') {
+          window.toggleAudioPlayback(button, audioUrl);
+        }
+      });
     });
-  });
-}
+  }
 
   function getMentionedUsers(text = '') {
     if (!text || !window.allProfiles?.length) return [];
