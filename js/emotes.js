@@ -16,7 +16,13 @@ window.EMOTES = {
   ':kris:': 'assets/gifs/kris-deltarune.gif',
   ':sans2:': 'assets/gifs/sans-undertale.gif',
   ':silly:': 'assets/gifs/silly.gif',
-  ':shadow:': 'assets/gifs/shadow.gif'
+  ':shadow:': 'assets/gifs/shadow.gif',
+  ':spamton:': 'assets/gifs/spamton.gif',
+  ':walter:': 'assets/gifs/walter.gif',
+  ':pink:': 'assets/gifs/pink.gif',
+  ':old:': 'assets/gifs/old.gif',
+  ':eram:': 'assets/gifs/eram.gif',
+  ':shadow:': 'assets/gifs/fish-spin-sha.gif'
 };
 
 window.parseEmotes = function parseEmotes(text) {
