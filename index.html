@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rory chat</title>
+  <title>Rory Chat</title>
   <link rel="stylesheet" href="assets/css/variables.css" />
   <link rel="stylesheet" href="assets/css/layout.css" />
   <link rel="stylesheet" href="assets/css/components.css" />
@@ -81,9 +81,14 @@
             <input type="file" id="file-upload" style="display: none;" onchange="window.handleFileUpload(event)" />
 
             <input type="text" id="msg-input" placeholder="Message..." oninput="window.handleTypingInput()" onkeydown="if(event.key === 'Enter') window.sendMessage()" />
-            
+
             <button type="button" class="emote-toggle-btn" onclick="toggleEmotePicker(event)" title="Open Emote Picker">
-              😃
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                <line x1="15" y1="9" x2="15.01" y2="9"></line>
+              </svg>
             </button>
           </div>
 
