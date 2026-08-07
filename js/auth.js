@@ -22,6 +22,11 @@
 
       if (window.updateUserControls) window.updateUserControls();
       if (window.initApp) await window.initApp();
+
+      // Trigger "What's New" modal on active session load
+      if (typeof showWhatsNew === 'function') {
+        showWhatsNew();
+      }
     } else {
       const authScreen = document.getElementById('auth-screen');
       const chatScreen = document.getElementById('chat-screen');
@@ -56,6 +61,11 @@
 
     if (window.updateUserControls) window.updateUserControls();
     if (window.initApp) await window.initApp();
+
+    // Trigger "What's New" modal on manual login success
+    if (typeof showWhatsNew === 'function') {
+      showWhatsNew();
+    }
   };
 
   // Auth State Listener
