@@ -543,3 +543,11 @@
 .whats-new-btn:hover {
   background: #4752c4;
 }
+
+.whats-new-banner img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover; /* Prevents stretching */
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
