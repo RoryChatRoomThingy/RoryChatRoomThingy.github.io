@@ -1,0 +1,33 @@
+:root {
+  --bg-tertiary: #1E1F22;
+  --bg-secondary: #2B2D31;
+  --bg-primary: #313338;
+  --bg-message-hover: #2E3035;
+  --channeltextarea-bg: #383A40;
+  --text-normal: #DBDEE1;
+  --text-muted: #949BA4;
+  --header-primary: #F2F3F5;
+  --interactive-normal: #B5BAC1;
+  --interactive-hover: #DBDEE1;
+  --interactive-active: #FFFFFF;
+  --bg-modifier-hover: rgba(78, 80, 88, 0.3);
+  --bg-modifier-active: rgba(78, 80, 88, 0.6);
+  --brand-experiment: #5865F2;
+  --danger: #DA373C;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-normal);
+  overflow: hidden;
+}

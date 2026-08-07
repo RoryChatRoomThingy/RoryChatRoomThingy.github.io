@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rory chat</title>
+  <link rel="stylesheet" href="assets/css/variables.css" />
+  <link rel="stylesheet" href="assets/css/layout.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+  <link rel="stylesheet" href="assets/css/scrollbar.css" />
+</head>
+<body>
+
+  <div id="auth-screen">
+    <h3>Welcome Back!</h3>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="handleLogin()">Log In</button>
+  </div>
+
+  <div id="chat-screen">
+    <div class="layout">
+      
+      <nav class="servers-bar">
+        <button class="server-icon dm-icon active" id="dm-btn" type="button" onclick="switchToContext('dm')" title="Direct Messages">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4 18c1.2-3.2 4.3-5 8-5s6.8 1.8 8 5"></path>
+            <path d="M17 15l2 2-2 2"></path>
+          </svg>
+        </button>
+        <div class="server-separator"></div>
+        <div class="server-icon" id="server-btn" onclick="switchToContext('server')" title="Main Server">
+          MS
+        </div>
+      </nav>
+
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div class="header-title" id="sidebar-title">Direct Messages</div>
+        </div>
+
+        <div class="sidebar-content">
+          <div id="users-list"></div>
+        </div>
+        
+        <div class="user-controls">
+          <img class="user-avatar-small" id="current-user-avatar" src="assets/icons/avatars/user1.png" alt="You" />
+          <div class="user-name-tag" id="current-user-name">You</div>
+        </div>
+      </div>
+
+      <div class="main-chat">
+        <div class="chat-header">
+          <span class="chat-hash">#</span>
+          <span id="chat-title">general</span>
+        </div>
+        
+        <div id="messages-list"></div>
+
+        <div class="chat-bottom-section">
+          
+          <div class="emote-picker-popover" id="emote-picker">
+            <div class="emote-picker-header">
+              <div class="emote-picker-title">Select a GIF/Emoji</div>
+              <button class="close-picker-btn" onclick="toggleEmotePicker(event)">✕</button>
+            </div>
+            <div class="emote-grid" id="emote-grid"></div>
+          </div>
+
+          <div class="typing-indicator" id="typing-indicator"></div>
+
+          <div class="input-area">
+            <div id="mention-picker" class="mention-picker" hidden></div>
+
+            <label for="file-upload" class="file-upload-btn" title="Upload File">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+            </label>
+            <input type="file" id="file-upload" style="display: none;" onchange="window.handleFileUpload(event)" />
+
+            <input type="text" id="msg-input" placeholder="Message..." oninput="window.handleTypingInput()" onkeydown="if(event.key === 'Enter') window.sendMessage()" />
+            
+            <button type="button" class="emote-toggle-btn" onclick="toggleEmotePicker(event)" title="Open Emote Picker">
+              😃
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/emotes.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
