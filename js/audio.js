@@ -1,63 +1,65 @@
 (function () {
-  let currentAudio = null;
+  // Shared global audio player to prevent memory leaks and browser lag
+  const globalAudio = new Audio();
   let currentButton = null;
 
-  // Toggle play/pause state for audio attachments inside chat messages
   window.toggleAudioPlayback = function (button, audioUrl) {
     if (!audioUrl) return;
 
-    // If clicking the button of the currently active audio
-    if (currentAudio && currentButton === button) {
-      if (currentAudio.paused) {
-        currentAudio.play();
-        setButtonState(button, true);
+    // Block local system paths that cause Security Errors on GitHub Pages
+    if (audioUrl.startsWith('file:///')) {
+      console.warn('Blocked local file path:', audioUrl);
+      alert('Cannot play files directly from a local drive path for browser security reasons.');
+      return;
+    }
+
+    // Toggle play/pause if clicking the currently active track
+    if (currentButton === button) {
+      if (globalAudio.paused) {
+        globalAudio.play().then(() => setButtonState(button, true)).catch(console.warn);
       } else {
-        currentAudio.pause();
+        globalAudio.pause();
         setButtonState(button, false);
       }
       return;
     }
 
-    // Stop any currently playing audio across the site before starting new track
+    // Stop previous playback and reset
     window.stopAllAudio();
 
-    // Initialize and play new audio track
-    const audio = new Audio(audioUrl);
-    currentAudio = audio;
+    // Assign new track to shared audio player
     currentButton = button;
-
+    globalAudio.src = audioUrl;
     setButtonState(button, true);
 
-    audio.play().catch((err) => {
+    globalAudio.play().catch((err) => {
       console.warn('Audio playback error:', err);
       setButtonState(button, false);
       resetCurrent();
     });
 
-    // Reset button icon when track finishes
-    audio.onended = () => {
+    globalAudio.onended = () => {
       setButtonState(button, false);
       resetCurrent();
     };
 
-    audio.onerror = () => {
+    globalAudio.onerror = (err) => {
+      console.warn('Audio stream error:', err);
       setButtonState(button, false);
       resetCurrent();
     };
   };
 
   window.stopAllAudio = function () {
-    if (currentAudio) {
-      currentAudio.pause();
-      if (currentButton) {
-        setButtonState(currentButton, false);
-      }
-      resetCurrent();
+    if (currentButton) {
+      setButtonState(currentButton, false);
     }
+    globalAudio.pause();
+    globalAudio.removeAttribute('src'); // Free memory
+    resetCurrent();
   };
 
   function resetCurrent() {
-    currentAudio = null;
     currentButton = null;
   }
 
