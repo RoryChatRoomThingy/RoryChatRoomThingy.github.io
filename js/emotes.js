@@ -21,7 +21,8 @@ window.EMOTES = {
   ':walter:': 'assets/gifs/walter.gif',
   ':pink:': 'assets/gifs/pink.gif',
   ':old:': 'assets/gifs/old.gif',
-  ':eram:': 'assets/gifs/eram.gif',
+  ':eram:': 'assets/gifs/deltarune-goodnight.gif',
+  ':text:': 'assets/gifs/text.gif',
   ':shadow:': 'assets/gifs/fish-spin-sha.gif'
 };
 
