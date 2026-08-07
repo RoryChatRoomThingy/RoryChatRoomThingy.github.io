@@ -567,16 +567,36 @@ function isAudioFile(type = '', name = '') {
   };
 })();
 
-// Add any words you want to flag here (case-insensitive)
-const FLAGGED_WORDS = ['badword', 'fool', 'spam', 'hate', 'testbadword'];
+const FLAGGED_WORDS = ['gaster', 'green', 'WDGaster', 'boo', '?'];
+
+// Helper to escape special regex characters like '?' or '*'
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 function censorContent(text) {
   if (!text) return text;
 
-  // Option A: If ANY flagged word is found, replace the ENTIRE message with [redacted]
-  const containsFlaggedWord = FLAGGED_WORDS.some((word) =>
-    new RegExp(`\\b${word}\\b`, 'gi').test(text)
-  );
+  // 1. Create a "cleaned" string with all spaces, dots, dashes, and underscores removed
+  // e.g. "g a s t e r" or "g.a.s.t.e.r" becomes "gaster"
+  const normalizedText = text.replace(/[\s\._\-]+/g, '').toLowerCase();
+
+  // 2. Check both the original text and the normalized text
+  const containsFlaggedWord = FLAGGED_WORDS.some((word) => {
+    if (!word) return false;
+
+    const lowerWord = word.toLowerCase();
+
+    // Check if the spaced-out/normalized version contains the bad word
+    if (normalizedText.includes(lowerWord)) {
+      return true;
+    }
+
+    // Check original text with exact word boundary matching for standard words
+    const escaped = escapeRegExp(word);
+    const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
+    return regex.test(text);
+  });
 
   if (containsFlaggedWord) {
     return '<span class="redacted-text">[redacted]</span>';
