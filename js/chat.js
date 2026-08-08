@@ -4,37 +4,9 @@
 
   window.currentUser = null;
   window.currentProfile = null;
-  
-  // Default to main server on load
-  window.currentContext = { type: 'server', targetId: 'main-server', name: 'Main Server' };
+  window.currentContext = { type: 'dm', targetId: null, name: 'Direct Messages' };
   window.allProfiles = [];
   window.chatChannel = null;
-
-  // Helper to format timestamps like Discord (Today at 3:45 PM, Yesterday at..., etc.)
-  function formatDiscordTimestamp(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-    const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
-    const timeStr = date.toLocaleTimeString([], timeOptions);
-
-    if (msgDate.getTime() === today.getTime()) {
-      return `Today at ${timeStr}`;
-    } else if (msgDate.getTime() === yesterday.getTime()) {
-      return `Yesterday at ${timeStr}`;
-    } else {
-      const dateStr = date.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' });
-      return `${dateStr} ${timeStr}`;
-    }
-  }
 
   function resolveAvatarUrl(url) {
     const fallback = 'assets/icons/avatars/user1.png';
@@ -155,10 +127,134 @@
     });
   }
 
-  // Detect query after `@` symbol
-  function getMentionQuery(text = '') {
-    const match = text.match(/@([a-zA-Z0-9_]*)$/);
-    return match ? match[1].toLowerCase() : null;
+  // --- TEXT MODIFIERS / MARKDOWN PARSER ---
+  function parseMarkdown(text) {
+    if (!text) return text;
+
+    const lines = text.split('\n');
+    let resultLines = [];
+    let inMultilineQuote = false;
+    let multilineQuoteBuffer = [];
+    let inList = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+
+      // Multi-line quote mode (>>>)
+      if (inMultilineQuote) {
+        multilineQuoteBuffer.push(line);
+        continue;
+      }
+
+      // Check for Multi-line Quote start: >>> text
+      if (/^&gt;&gt;&gt;\s|^>>>\s/.test(line)) {
+        inMultilineQuote = true;
+        const content = line.replace(/^(&gt;&gt;&gt;|>>>)\s?/, '');
+        multilineQuoteBuffer.push(content);
+        continue;
+      }
+
+      // Bulleted list item check (- text or * text)
+      const isListItem = /^[-*]\s+(.+)/.test(line);
+
+      if (inList && !isListItem) {
+        resultLines.push('</ul>');
+        inList = false;
+      }
+
+      // Small Header (H3): ### text
+      if (/^###\s+(.+)/.test(line)) {
+        line = line.replace(/^###\s+(.+)/, '<h3 class="chat-h3">$1</h3>');
+      }
+      // Medium Header (H2): ## text
+      else if (/^##\s+(.+)/.test(line)) {
+        line = line.replace(/^##\s+(.+)/, '<h2 class="chat-h2">$1</h2>');
+      }
+      // Big Header (H1): # text
+      else if (/^#\s+(.+)/.test(line)) {
+        line = line.replace(/^#\s+(.+)/, '<h1 class="chat-h1">$1</h1>');
+      }
+      // Subtext: -# text
+      else if (/^-#\s+(.+)/.test(line)) {
+        line = line.replace(/^-#\s+(.+)/, '<span class="chat-subtext">$1</span>');
+      }
+      // Single-line Quote: > text
+      else if (/^(&gt;|>)\s+(.+)/.test(line)) {
+        line = line.replace(/^(&gt;|>)\s+(.+)/, '<blockquote class="chat-quote">$2</blockquote>');
+      }
+      // Bulleted List start / item
+      else if (isListItem) {
+        if (!inList) {
+          resultLines.push('<ul class="chat-bullet-list">');
+          inList = true;
+        }
+        line = line.replace(/^[-*]\s+(.+)/, '<li>$1</li>');
+      }
+
+      resultLines.push(line);
+    }
+
+    if (inList) {
+      resultLines.push('</ul>');
+    }
+
+    if (inMultilineQuote) {
+      resultLines.push(`<blockquote class="chat-quote">${multilineQuoteBuffer.join('<br>')}</blockquote>`);
+    }
+
+    let formatted = resultLines.join('\n');
+
+    // Spoiler: ||text||
+    formatted = formatted.replace(/\|\|(.*?)\|\|/g, '<span class="chat-spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>');
+
+    // Bold: **text**
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    // Underline: __text__
+    formatted = formatted.replace(/__(.*?)__/g, '<u>$1</u>');
+
+    // Strikethrough: ~~text~~
+    formatted = formatted.replace(/~~(.*?)~~/g, '<s>$1</s>');
+
+    // Italic: *text* or _text_
+    formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    formatted = formatted.replace(/(?<!\w)_(.*?)_(?!\w)/g, '<em>$1</em>');
+
+    // Convert remaining standard linebreaks
+    formatted = formatted.replace(/\n/g, '<br>');
+
+    return formatted;
+  }
+
+  function getMentionedUsers(text = '') {
+    if (!text || !window.allProfiles?.length) return [];
+
+    const mentions = [];
+    const seenIds = new Set();
+    const regex = /@\(([^)]+)\)/g;
+
+    for (const match of text.matchAll(regex)) {
+      const candidateName = match[1].trim();
+      if (!candidateName) continue;
+
+      const normalizedCandidate = normalizeMentionValue(candidateName);
+      const matchedProfile = window.allProfiles.find((profile) => {
+        const values = [profile.display_name, profile.email, profile.user_name, profile.full_name].filter(Boolean);
+        return values.some((value) => {
+          const normalizedValue = normalizeMentionValue(value);
+          return normalizedValue === normalizedCandidate ||
+            normalizedValue.includes(normalizedCandidate) ||
+            normalizedCandidate.includes(normalizedValue);
+        });
+      });
+
+      if (matchedProfile && !seenIds.has(matchedProfile.id)) {
+        mentions.push(matchedProfile);
+        seenIds.add(matchedProfile.id);
+      }
+    }
+
+    return mentions;
   }
 
   function hideMentionSuggestions() {
@@ -169,48 +265,58 @@
     }
   }
 
-  // Render Mention Suggestions dropdown
+  function getMentionQuery(text = '') {
+    const match = text.match(/@([A-Za-z0-9_. -]*)$/);
+    return match ? match[1] : '';
+  }
+
   function renderMentionSuggestions(text = '') {
     const picker = document.getElementById('mention-picker');
     if (!picker) return;
 
     const query = getMentionQuery(text);
-    if (query === null) {
+    const shouldShow = text.endsWith('@') || query.length > 0;
+    if (!shouldShow) {
       hideMentionSuggestions();
       return;
     }
 
     const suggestions = (window.allProfiles || [])
-      .filter((p) => p.id !== window.currentUser?.id)
-      .map((p) => {
-        const rawName = p.display_name || p.email.split('@')[0] || 'User';
-        return {
-          ...p,
-          handle: rawName.replace(/\s+/g, '')
-        };
+      .filter((profile) => profile.id !== window.currentUser?.id)
+      .filter((profile) => {
+        const values = [profile.display_name, profile.email, profile.user_name, profile.full_name].filter(Boolean);
+        const normalizedQuery = normalizeMentionValue(query);
+        return values.some((value) => {
+          const normalizedValue = normalizeMentionValue(value);
+          return !normalizedQuery || normalizedValue.includes(normalizedQuery) || normalizedQuery.includes(normalizedValue);
+        });
       })
-      .filter((p) => p.handle.toLowerCase().includes(query))
       .slice(0, 5);
 
-    if (suggestions.length === 0) {
+    if (!suggestions.length) {
       hideMentionSuggestions();
       return;
     }
 
-    picker.innerHTML = suggestions.map((p) => {
-      return `<button class="mention-option" type="button" data-handle="${p.handle}">@${p.handle}</button>`;
+    picker.innerHTML = suggestions.map((profile) => {
+      const label = profile.display_name || profile.email || profile.user_name || 'User';
+      return `<button class="mention-option" type="button" data-user-id="${profile.id}" data-user-name="${label}">${label}</button>`;
     }).join('');
 
     picker.querySelectorAll('.mention-option').forEach((option) => {
       option.addEventListener('click', () => {
-        const input = document.getElementById('msg-input');
-        if (input) {
-          const existing = input.value;
-          const match = existing.match(/@([a-zA-Z0-9_]*)$/);
-          if (match) {
-            const before = existing.slice(0, match.index);
-            input.value = `${before}@${option.dataset.handle} `;
+        if (option.dataset.userId) {
+          const input = document.getElementById('msg-input');
+          if (input) {
+            const existing = input.value;
+            const match = existing.match(/@([A-Za-z0-9_. -]*)$/);
+            const before = match ? existing.slice(0, match.index) : existing;
+            const after = match ? existing.slice(match.index + match[0].length) : '';
+            const mentionText = `@(${option.dataset.userName || 'User'})`;
+            input.value = `${before}${mentionText}${after}`;
+            input.dispatchEvent(new Event('input'));
             input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
           }
         }
         hideMentionSuggestions();
@@ -222,14 +328,8 @@
 
   function isMessageMentionedForCurrentUser(message) {
     if (!message || !window.currentUser) return false;
-    
-    const myName = window.currentProfile?.display_name || window.currentUser?.email?.split('@')[0] || '';
-    if (!myName) return false;
-
-    const myHandle = `@${myName.replace(/\s+/g, '')}`.toLowerCase();
-    const content = (message.content || '').toLowerCase();
-
-    return content.includes(myHandle) || content.includes(`@(${myName.toLowerCase()})`);
+    const mentionedUsers = getMentionedUsers(message.content || '');
+    return mentionedUsers.some((user) => user.id === window.currentUser.id);
   }
 
   function updateTypingUI() {
@@ -298,7 +398,7 @@
 
     channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
       const msg = payload.new;
-      if (window.currentContext.type === 'server' && (!msg.is_dm || msg.is_dm === false)) {
+      if (window.currentContext.type === 'server' && !msg.is_dm) {
         renderMessage(msg);
       } else if (
         window.currentContext.type === 'dm' &&
@@ -423,7 +523,7 @@
     let query = window.supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
 
     if (window.currentContext.type === 'server') {
-      query = query.or('is_dm.eq.false,is_dm.is.null');
+      query = query.eq('is_dm', false);
     } else if (!window.currentContext.targetId) {
       const emptyState = document.createElement('div');
       emptyState.className = 'empty-state';
@@ -431,27 +531,11 @@
       list.appendChild(emptyState);
       return;
     } else {
-      if (!window.currentUser?.id) {
-        console.warn('Cannot load DM messages: Current user is not defined.');
-        return;
-      }
-      const myId = window.currentUser.id;
-      const targetId = window.currentContext.targetId;
-      query = query.eq('is_dm', true).or(`and(sender_id.eq.${myId},receiver_id.eq.${targetId}),and(sender_id.eq.${targetId},receiver_id.eq.${myId})`);
+      query = query.eq('is_dm', true).or(`and(sender_id.eq.${window.currentUser.id},receiver_id.eq.${window.currentContext.targetId}),and(sender_id.eq.${window.currentContext.targetId},receiver_id.eq.${window.currentUser.id})`);
     }
 
-    const { data: messages, error } = await query;
-
-    if (error) {
-      console.error('Error fetching messages from Supabase:', error);
-      return;
-    }
-
-    if (messages && messages.length > 0) {
-      messages.forEach(renderMessage);
-    } else {
-      console.log('No messages found for current context.');
-    }
+    const { data: messages } = await query;
+    if (messages) messages.forEach(renderMessage);
   };
 
   function renderMessage(msg) {
@@ -459,41 +543,41 @@
     if (!list) return;
 
     const div = document.createElement('div');
-    
-    // Check if current user was mentioned in this message
     const shouldHighlight = isMessageMentionedForCurrentUser(msg) && msg.sender_id !== window.currentUser?.id;
     div.className = shouldHighlight ? 'msg msg-mentioned' : 'msg';
 
-    if (shouldHighlight) {
-      if (typeof window.playSoundEffect === 'function') {
-        window.playSoundEffect('ping');
+    try {
+      if (shouldHighlight && typeof window.playSoundEffect === 'function') {
+        window.playSoundEffect('mention');
       }
+    } catch (e) {
+      console.warn('Failed to play mention sound', e);
     }
 
     const cleanAvatarUrl = resolveAvatarUrl(msg.avatar_url || 'assets/icons/avatars/user1.png');
     const displayName = msg.display_name || msg.sender_email || 'User';
     const attachment = parseAttachment(msg.content || '');
     
-    const timestampStr = formatDiscordTimestamp(msg.created_at);
-
+    // 1. Get plain text
     const rawText = stripAttachmentFromContent(msg.content || '');
-    const plainTextContent = typeof window.censorContent === 'function' ? window.censorContent(rawText) : rawText;
-    const formattedContent = typeof window.parseEmotes === 'function' ? window.parseEmotes(plainTextContent) : plainTextContent;
     
-    // Convert mentions to mention chips
-    const highlightedContent = formattedContent
-      .replace(/@\(([^)]+)\)/g, '<span class="mention-chip">@$1</span>')
-      .replace(/@([a-zA-Z0-9_]+)/g, '<span class="mention-chip">@$1</span>');
+    // 2. Run censor filter
+    const plainTextContent = censorContent(rawText);
+    
+    // 3. Parse emotes
+    const formattedContent = typeof window.parseEmotes === 'function' ? window.parseEmotes(plainTextContent) : plainTextContent;
 
+    // 4. Parse text modifiers (Markdown)
+    const markdownContent = parseMarkdown(formattedContent);
+
+    // 5. Parse mention chips
+    const highlightedContent = markdownContent.replace(/@\(([^)]+)\)/g, '<span class="mention-chip">$&</span>');
     const attachmentMarkup = renderAttachmentMarkup(attachment);
 
     div.innerHTML = `
       <img class="msg-avatar" src="${cleanAvatarUrl}" alt="pfp" onerror="this.onerror=null; this.src='assets/icons/avatars/user1.png'" />
       <div class="msg-content">
-        <div class="msg-header">
-          <span class="msg-user">${escapeHtml(displayName)}</span>
-          <span class="msg-timestamp">${timestampStr}</span>
-        </div>
+        <div class="msg-user">${escapeHtml(displayName)}</div>
         ${highlightedContent ? `<div class="msg-text">${highlightedContent}</div>` : ''}
         ${attachmentMarkup ? `<div class="msg-attachment-wrap">${attachmentMarkup}</div>` : ''}
       </div>
@@ -585,20 +669,20 @@
   };
 })();
 
-// Censor Filter Helpers
 const FLAGGED_WORDS = ['klop'];
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-window.censorContent = function censorContent(text) {
+function censorContent(text) {
   if (!text) return text;
 
   const normalizedText = text.replace(/[\s\._\-]+/g, '').toLowerCase();
 
   const containsFlaggedWord = FLAGGED_WORDS.some((word) => {
     if (!word) return false;
+
     const lowerWord = word.toLowerCase();
 
     if (normalizedText.includes(lowerWord)) {
@@ -615,4 +699,4 @@ window.censorContent = function censorContent(text) {
   }
 
   return text;
-};
+}
