@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rory Chat</title>
+  
   <link rel="stylesheet" href="assets/css/variables.css" />
   <link rel="stylesheet" href="assets/css/layout.css" />
   <link rel="stylesheet" href="assets/css/components.css" />
@@ -83,10 +84,10 @@
             <input type="text" id="msg-input" placeholder="Message..." oninput="window.handleTypingInput()" onkeydown="if(event.key === 'Enter') window.sendMessage()" />
 
             <button type="button" class="emote-toggle-btn" onclick="toggleEmotePicker(event)" title="Open Emote Picker">
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM8.5 9.5C7.67157 9.5 7 10.1716 7 11C7 11.8284 7.67157 12.5 8.5 12.5C9.32843 12.5 10 11.8284 10 11C10 10.1716 9.32843 9.5 8.5 9.5ZM15.5 9.5C14.6716 9.5 14 10.1716 14 11C14 11.8284 14.6716 12.5 15.5 12.5C16.3284 12.5 17 11.8284 17 11C17 10.1716 16.3284 9.5 15.5 9.5ZM12 17.5C14.33 17.5 16.27 16.04 17 14H7C7.73 16.04 9.67 17.5 12 17.5Z" />
-  </svg>
-</button>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM8.5 9.5C7.67157 9.5 7 10.1716 7 11C7 11.8284 7.67157 12.5 8.5 12.5C9.32843 12.5 10 11.8284 10 11C10 10.1716 9.32843 9.5 8.5 9.5ZM15.5 9.5C14.6716 9.5 14 10.1716 14 11C14 11.8284 14.6716 12.5 15.5 12.5C16.3284 12.5 17 11.8284 17 11C17 10.1716 16.3284 9.5 15.5 9.5ZM12 17.5C14.33 17.5 16.27 16.04 17 14H7C7.73 16.04 9.67 17.5 12 17.5Z" />
+              </svg>
+            </button>
           </div>
 
         </div>
@@ -94,32 +95,33 @@
 
     </div>
   </div>
+
   <div id="whats-new-modal" class="modal-overlay" style="display: none;">
-  <div class="whats-new-card">
-    <div class="whats-new-header">
-      <h2>What's New</h2>
-      <button class="whats-new-close" onclick="closeWhatsNew()">&times;</button>
-    </div>
+    <div class="whats-new-card">
+      <div class="whats-new-header">
+        <h2>What's New</h2>
+        <button class="whats-new-close" onclick="closeWhatsNew()">&times;</button>
+      </div>
 
-    <div class="whats-new-body">
-<div class="whats-new-banner">
-    <img src="assets/banners/update_v1.png" alt="Update Banner" />
-  </div>
-      <ul class="whats-new-list">
-        <li>
-          <strong>Glitch Patch:</strong> Fixed the bug where old messages didn't appear. Cause: There was too many messages to load.
-        </li>
-        <li>
-          <strong>Future UPD</strong> VC support with new sound clips. Also activities
-        </li>
-      </ul>
-    </div>
+      <div class="whats-new-body">
+        <div class="whats-new-banner">
+          <img src="assets/banners/update_v1.png" alt="Update Banner" />
+        </div>
+        <ul class="whats-new-list">
+          <li>
+            <strong>Glitch Patch:</strong> Fixed the bug where old messages didn't appear. Cause: There were too many messages to load.
+          </li>
+          <li>
+            <strong>Future UPD:</strong> VC support with new sound clips. Also activities.
+          </li>
+        </ul>
+      </div>
 
-    <div class="whats-new-footer">
-      <button class="whats-new-btn" onclick="closeWhatsNew()">Got it!</button>
+      <div class="whats-new-footer">
+        <button class="whats-new-btn" onclick="closeWhatsNew()">Got it!</button>
+      </div>
     </div>
   </div>
-</div>
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
