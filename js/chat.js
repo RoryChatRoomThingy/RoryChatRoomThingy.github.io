@@ -586,7 +586,7 @@
 })();
 
 // Censor Filter Helpers
-const FLAGGED_WORDS = ['gaster', 'green', 'WDGaster'];
+const FLAGGED_WORDS = ['klop'];
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
