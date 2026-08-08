@@ -653,36 +653,65 @@ window.switchToContext = function switchToContext(type, targetUser = null) {
   };
 
 /* ==========================================================================
-   File Upload Handler (Supports All Formats)
+   Universal File Upload Handler (Supabase Storage + 20MB Limit)
    ========================================================================== */
-window.handleFileUpload = function handleFileUpload(event) {
+window.handleFileUpload = async function handleFileUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
+  // 1. Enforce 20 MB File Size Limit
+  const MAX_SIZE_MB = 20;
+  if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+    alert(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed size is ${MAX_SIZE_MB}MB.`);
+    event.target.value = '';
+    return;
+  }
 
-  reader.onload = function (e) {
-    const fileUrl = e.target.result;
+  // 2. Generate a unique filename to prevent overwriting existing files
+  const fileExt = file.name.split('.').pop();
+  const cleanFileName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+  const uniquePath = `${Date.now()}_${cleanFileName}.${fileExt}`;
 
-    // Create the proper attachment payload object expected by buildAttachmentPayload
+  try {
+    // 3. Upload raw file to Supabase Storage bucket
+    const { data, error } = await window.supabaseClient.storage
+      .from('chat-files')
+      .upload(uniquePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Storage upload error:', error);
+      alert('Failed to upload file to storage.');
+      event.target.value = '';
+      return;
+    }
+
+    // 4. Get the light CDN public URL
+    const { data: publicUrlData } = window.supabaseClient.storage
+      .from('chat-files')
+      .getPublicUrl(uniquePath);
+
+    const fileUrl = publicUrlData.publicUrl;
+
+    // 5. Send payload with short URL instead of long Base64 string
     const attachmentObj = {
       type: file.type || 'application/octet-stream',
       name: file.name || 'attachment',
       dataUrl: fileUrl
     };
 
-    // Pass the attachment object directly to sendMessage
     if (typeof window.sendMessage === 'function') {
       window.sendMessage(attachmentObj);
-    } else {
-      console.warn('sendMessage function not found.');
     }
-
+  } catch (err) {
+    console.error('Unexpected upload error:', err);
+    alert('An error occurred while uploading.');
+  } finally {
     // Reset input so the same file can be uploaded again
     event.target.value = '';
-  };
-
-  reader.readAsDataURL(file);
+  }
 };
 
   window.sendMessage = async function sendMessage(attachment = null) {
