@@ -528,49 +528,44 @@ function showEggRoom() {
 }
 
 window.switchToContext = function switchToContext(type, targetUser = null) {
-    document.querySelectorAll('.nav-item, .server-icon').forEach((el) => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item, .server-icon').forEach((el) => el.classList.remove('active'));
 
-    activeTypers = {};
-    updateTypingUI();
-    const emotePicker = document.getElementById('emote-picker');
-    const audioPicker = document.getElementById('audio-picker');
-    const sidebarTitle = document.getElementById('sidebar-title');
-    const userList = document.getElementById('users-list');
-    if (emotePicker) emotePicker.style.display = 'none';
-    if (audioPicker) audioPicker.style.display = 'none';
+  activeTypers = {};
+  updateTypingUI();
+  const emotePicker = document.getElementById('emote-picker');
+  const audioPicker = document.getElementById('audio-picker');
+  const sidebarTitle = document.getElementById('sidebar-title');
+  const userList = document.getElementById('users-list');
+  if (emotePicker) emotePicker.style.display = 'none';
+  if (audioPicker) audioPicker.style.display = 'none';
 
-    if (type === 'server') {
-      // 🎲 1 in 20 (5%) chance to show the secret Egg Room
-      if (Math.floor(Math.random() * 243894538289239493290920) === 0) {
-        showEggRoom();
-      }
-
-      window.currentContext = { type: 'server', targetId: 'main-server', name: 'Main Server' };
-      const serverBtn = document.getElementById('server-btn');
-      if (serverBtn) serverBtn.classList.add('active');
-      if (sidebarTitle) sidebarTitle.innerText = 'Main Server';
-      if (userList) userList.innerHTML = '';
-    } else {
-      window.currentContext = { type: 'dm', targetId: null, name: 'Direct Messages' };
-      const dmBtn = document.getElementById('dm-btn');
-      if (dmBtn) dmBtn.classList.add('active');
-      if (sidebarTitle) sidebarTitle.innerText = 'Direct Messages';
-      if (userList) {
-        userList.innerHTML = '';
-        loadUsersList();
-      }
-      if (targetUser) {
-        const userName = targetUser.display_name || targetUser.email;
-        window.currentContext = { type: 'dm', targetId: targetUser.id, name: `Direct Message: ${userName}` };
-        const activeElem = document.querySelector(`.dm-user-${targetUser.id}`);
-        if (activeElem) activeElem.classList.add('active');
-      }
+  if (type === 'server') {
+    window.currentContext = { type: 'server', targetId: 'main-server', name: 'Main Server' };
+    const serverBtn = document.getElementById('server-btn');
+    if (serverBtn) serverBtn.classList.add('active');
+    if (sidebarTitle) sidebarTitle.innerText = 'Main Server';
+    if (userList) userList.innerHTML = '';
+  } else {
+    window.currentContext = { type: 'dm', targetId: null, name: 'Direct Messages' };
+    const dmBtn = document.getElementById('dm-btn');
+    if (dmBtn) dmBtn.classList.add('active');
+    if (sidebarTitle) sidebarTitle.innerText = 'Direct Messages';
+    if (userList) {
+      userList.innerHTML = '';
+      loadUsersList();
     }
+    if (targetUser) {
+      const userName = targetUser.display_name || targetUser.email;
+      window.currentContext = { type: 'dm', targetId: targetUser.id, name: `Direct Message: ${userName}` };
+      const activeElem = document.querySelector(`.dm-user-${targetUser.id}`);
+      if (activeElem) activeElem.classList.add('active');
+    }
+  }
 
-    const title = document.getElementById('chat-title');
-    if (title) title.innerText = window.currentContext.name;
-    window.loadMessages();
-  };
+  const title = document.getElementById('chat-title');
+  if (title) title.innerText = window.currentContext.name;
+  window.loadMessages();
+};
 
   /* ==========================================================================
      5. Message Rendering & Sending
@@ -656,6 +651,47 @@ window.switchToContext = function switchToContext(type, targetUser = null) {
     const { data: messages } = await query;
     if (messages) messages.forEach(renderMessage);
   };
+
+  /* ==========================================================================
+   File Upload Handler (Images & Sound Support)
+   ========================================================================== */
+window.handleFileUpload = function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function (e) {
+    const fileUrl = e.target.result;
+    let contentHtml = '';
+
+    if (file.type.startsWith('image/')) {
+      // 🖼️ Image output
+      contentHtml = `<img src="${fileUrl}" alt="${file.name}" style="max-width: 280px; max-height: 280px; border-radius: 8px; margin-top: 6px; display: block;" />`;
+    } else if (file.type.startsWith('audio/')) {
+      // 🎵 Sound/Audio output with play button controls
+      contentHtml = `<audio controls src="${fileUrl}" style="margin-top: 6px; max-width: 280px; width: 100%;"></audio>`;
+    } else {
+      // 📎 Generic file fallback
+      contentHtml = `<a href="${fileUrl}" download="${file.name}" style="color: #5865F2; text-decoration: underline;">📎 ${file.name}</a>`;
+    }
+
+    // Automatically send or insert into chat
+    if (typeof window.sendMessage === 'function') {
+      window.sendMessage(contentHtml);
+    } else {
+      const messageInput = document.getElementById('message-input');
+      if (messageInput) {
+        messageInput.value += ` ${contentHtml}`;
+      }
+    }
+
+    // Reset input so users can re-select the same file if needed
+    event.target.value = '';
+  };
+
+  reader.readAsDataURL(file);
+};
 
   window.sendMessage = async function sendMessage(attachment = null) {
     const input = document.getElementById('msg-input');
