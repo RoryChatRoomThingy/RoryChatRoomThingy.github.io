@@ -5,12 +5,12 @@
   window.currentUser = null;
   window.currentProfile = null;
   
-  // FIX: Default to 'server' so old channel messages load on page refresh/login
+  // Default to 'server' so old channel messages load on page refresh/login
   window.currentContext = { type: 'server', targetId: 'main-server', name: 'Main Server' };
   window.allProfiles = [];
   window.chatChannel = null;
 
-  // Helper to format timestamps like Discord (Today at 3:45 PM, Yesterday at..., etc.)
+  // Helper to format timestamps like Discord
   function formatDiscordTimestamp(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -155,14 +155,13 @@
     });
   }
 
-// 1. Get the word currently being typed after the @ symbol
+  // 1. Get the word currently being typed after the @ symbol
   function getMentionQuery(text = '') {
-    // Matches @ followed by letters/numbers at the very end of the text input
     const match = text.match(/@([a-zA-Z0-9_]*)$/);
     return match ? match[1].toLowerCase() : null;
   }
 
-// 2. Hide Picker
+  // 2. Hide Picker
   function hideMentionSuggestions() {
     const picker = document.getElementById('mention-picker');
     if (picker) picker.hidden = true;
@@ -175,36 +174,32 @@
 
     const query = getMentionQuery(text);
     
-    // If no @ symbol is actively being typed, hide and stop
     if (query === null) {
       hideMentionSuggestions();
       return;
     }
 
-    // Create a "handle" (no spaces) for each user to search against
     const suggestions = (window.allProfiles || [])
       .filter((p) => p.id !== window.currentUser?.id)
       .map((p) => {
         const rawName = p.display_name || p.email.split('@')[0] || 'User';
         return {
           ...p,
-          handle: rawName.replace(/\s+/g, '') // Removes spaces
+          handle: rawName.replace(/\s+/g, '')
         };
       })
       .filter((p) => p.handle.toLowerCase().includes(query))
-      .slice(0, 5); // Show top 5 max
+      .slice(0, 5); 
 
     if (suggestions.length === 0) {
       hideMentionSuggestions();
       return;
     }
 
-    // Build the dropdown buttons
     picker.innerHTML = suggestions.map((p) => {
       return `<button class="mention-option" type="button" data-handle="${p.handle}">@${p.handle}</button>`;
     }).join('');
 
-    // Add click events to the dropdown buttons
     picker.querySelectorAll('.mention-option').forEach((option) => {
       option.addEventListener('click', () => {
         const input = document.getElementById('msg-input');
@@ -212,7 +207,6 @@
           const existing = input.value;
           const match = existing.match(/@([a-zA-Z0-9_]*)$/);
           if (match) {
-            // Replace the partial @typing with the full @Username
             const before = existing.slice(0, match.index);
             input.value = `${before}@${option.dataset.handle} `;
             input.focus();
@@ -225,10 +219,14 @@
     picker.hidden = false;
   }
 
+  // Handle @ ping mentions directly mapping to user profiles
   function isMessageMentionedForCurrentUser(message) {
-    if (!message || !window.currentUser) return false;
-    const mentionedUsers = getMentionedUsers(message.content || '');
-    return mentionedUsers.some((user) => user.id === window.currentUser.id);
+    if (!message || !window.currentUser || !window.currentProfile) return false;
+    
+    const myRawName = window.currentProfile.display_name || window.currentUser.email.split('@')[0];
+    const myHandle = `@${myRawName.replace(/\s+/g, '')}`.toLowerCase();
+    
+    return message.content.toLowerCase().includes(myHandle);
   }
 
   function updateTypingUI() {
@@ -247,7 +245,7 @@
     }
   }
 
-// 4. Update handleTypingInput to trigger the picker
+  // 4. Update handleTypingInput to trigger the picker
   window.handleTypingInput = function handleTypingInput() {
     const input = document.getElementById('msg-input');
     renderMentionSuggestions(input?.value || '');
@@ -416,75 +414,73 @@
   };
 
   window.loadMessages = async function loadMessages() {
-  const list = document.getElementById('messages-list');
-  if (!list) return;
-  list.innerHTML = '';
+    const list = document.getElementById('messages-list');
+    if (!list) return;
+    list.innerHTML = '';
 
-  let query = window.supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
+    let query = window.supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
 
-  if (window.currentContext.type === 'server') {
-    // Include both explicitly non-DM messages and old legacy messages where is_dm is NULL
-    query = query.or('is_dm.eq.false,is_dm.is.null');
-  } else if (!window.currentContext.targetId) {
-    const emptyState = document.createElement('div');
-    emptyState.className = 'empty-state';
-    emptyState.textContent = 'Select a direct message to start chatting.';
-    list.appendChild(emptyState);
-    return;
-  } else {
-    // Check that currentUser exists before querying DM messages
-    if (!window.currentUser?.id) {
-      console.warn('Cannot load DM messages: Current user is not defined.');
+    if (window.currentContext.type === 'server') {
+      query = query.or('is_dm.eq.false,is_dm.is.null');
+    } else if (!window.currentContext.targetId) {
+      const emptyState = document.createElement('div');
+      emptyState.className = 'empty-state';
+      emptyState.textContent = 'Select a direct message to start chatting.';
+      list.appendChild(emptyState);
+      return;
+    } else {
+      if (!window.currentUser?.id) {
+        console.warn('Cannot load DM messages: Current user is not defined.');
+        return;
+      }
+      const myId = window.currentUser.id;
+      const targetId = window.currentContext.targetId;
+      query = query.eq('is_dm', true).or(`and(sender_id.eq.${myId},receiver_id.eq.${targetId}),and(sender_id.eq.${targetId},receiver_id.eq.${myId})`);
+    }
+
+    const { data: messages, error } = await query;
+
+    if (error) {
+      console.error('Error fetching messages from Supabase:', error);
       return;
     }
-    const myId = window.currentUser.id;
-    const targetId = window.currentContext.targetId;
-    query = query.eq('is_dm', true).or(`and(sender_id.eq.${myId},receiver_id.eq.${targetId}),and(sender_id.eq.${targetId},receiver_id.eq.${myId})`);
-  }
 
-  // Destructure both data and error to diagnose issues
-  const { data: messages, error } = await query;
-
-  if (error) {
-    console.error('Error fetching messages from Supabase:', error);
-    return;
-  }
-
-  if (messages && messages.length > 0) {
-    messages.forEach();
-  } else {
-    console.log('No messages found for current context.');
-  }
-};
+    if (messages && messages.length > 0) {
+      // FIX: Added 'renderMessage' here inside forEach
+      messages.forEach(renderMessage);
+    } else {
+      console.log('No messages found for current context.');
+    }
+  };
 
   function renderMessage(msg) {
     const list = document.getElementById('messages-list');
     if (!list) return;
 
     const div = document.createElement('div');
+    
+    // FIX: Single declaration for shouldHighlight and ping check
     const shouldHighlight = isMessageMentionedForCurrentUser(msg) && msg.sender_id !== window.currentUser?.id;
     div.className = shouldHighlight ? 'msg msg-mentioned' : 'msg';
 
-    try {
-      if (shouldHighlight && typeof window.playSoundEffect === 'function') {
-        window.playSoundEffect('mention');
+    if (shouldHighlight) {
+      if (typeof window.playSoundEffect === 'function') {
+        window.playSoundEffect('ping');
       }
-    } catch (e) {
-      console.warn('Failed to play mention sound', e);
     }
 
     const cleanAvatarUrl = resolveAvatarUrl(msg.avatar_url || 'assets/icons/avatars/user1.png');
     const displayName = msg.display_name || msg.sender_email || 'User';
     const attachment = parseAttachment(msg.content || '');
     
-    // Format Discord timestamp
     const timestampStr = formatDiscordTimestamp(msg.created_at);
 
-    // Filter text & emotes
     const rawText = stripAttachmentFromContent(msg.content || '');
     const plainTextContent = typeof window.censorContent === 'function' ? window.censorContent(rawText) : rawText;
     const formattedContent = typeof window.parseEmotes === 'function' ? window.parseEmotes(plainTextContent) : plainTextContent;
-    const highlightedContent = formattedContent.replace(/@\(([^)]+)\)/g, '<span class="mention-chip">$&</span>');
+    
+    // Turn the @Username handle in text into the blue UI chip
+    const highlightedContent = formattedContent.replace(/@([a-zA-Z0-9_]+)/g, '<span class="mention-chip">$&</span>');
     const attachmentMarkup = renderAttachmentMarkup(attachment);
 
     div.innerHTML = `
@@ -502,17 +498,6 @@
     list.appendChild(div);
     attachAudioAttachmentHandlers();
     list.scrollTop = list.scrollHeight;
-
-    // Look for this part inside renderMessage(msg) { ... }
-  const shouldHighlight = isMessageMentionedForCurrentUser(msg) && msg.sender_id !== window.currentUser?.id;
-  div.className = shouldHighlight ? 'msg msg-mentioned' : 'msg';
-
-  // Play sound if highlighted!
-  if (shouldHighlight) {
-    if (typeof window.playSoundEffect === 'function') {
-      window.playSoundEffect('ping');
-    }
-  }
   }
 
   window.renderMessage = renderMessage;
