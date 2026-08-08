@@ -465,7 +465,69 @@
     name.textContent = profileName;
   };
 
-  window.switchToContext = function switchToContext(type, targetUser = null) {
+  /* ==========================================================================
+   Egg Room Secret (Deltarune Easter Egg)
+   ========================================================================== */
+function showEggRoom() {
+  let eggOverlay = document.getElementById('egg-room-overlay');
+
+  // Create the overlay dynamically if it doesn't exist yet
+  if (!eggOverlay) {
+    eggOverlay = document.createElement('div');
+    eggOverlay.id = 'egg-room-overlay';
+
+    // Fullscreen dark overlay styling
+    Object.assign(eggOverlay.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: '#000000',
+      zIndex: '999999',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      userSelect: 'none'
+    });
+
+    eggOverlay.innerHTML = `
+      <img 
+        src="assets/kris.png" 
+        alt="Kris" 
+        style="max-height: 55vh; image-rendering: pixelated; object-fit: contain;" 
+        onerror="this.alt='[assets/kris.png not found]';"
+      />
+      <h1 style="
+        color: #ffffff; 
+        font-family: monospace, sans-serif; 
+        font-size: 36px; 
+        margin-top: 30px; 
+        transform: scaleX(2.4) scaleY(0.85); 
+        transform-origin: center; 
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        text-shadow: 2px 2px #000;
+      ">Congrats! You found me!</h1>
+      <p style="color: #555; margin-top: 50px; font-size: 12px; transform: scaleX(1.2); font-family: monospace;">
+        [Click anywhere to exit]
+      </p>
+    `;
+
+    // Click anywhere on the overlay to close it
+    eggOverlay.addEventListener('click', () => {
+      eggOverlay.style.display = 'none';
+    });
+
+    document.body.appendChild(eggOverlay);
+  } else {
+    eggOverlay.style.display = 'flex';
+  }
+}
+
+window.switchToContext = function switchToContext(type, targetUser = null) {
     document.querySelectorAll('.nav-item, .server-icon').forEach((el) => el.classList.remove('active'));
 
     activeTypers = {};
@@ -478,6 +540,11 @@
     if (audioPicker) audioPicker.style.display = 'none';
 
     if (type === 'server') {
+      // 🎲 1 in 20 (5%) chance to show the secret Egg Room
+      if (Math.floor(Math.random() * 20) === 0) {
+        showEggRoom();
+      }
+
       window.currentContext = { type: 'server', targetId: 'main-server', name: 'Main Server' };
       const serverBtn = document.getElementById('server-btn');
       if (serverBtn) serverBtn.classList.add('active');
