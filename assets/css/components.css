@@ -571,3 +571,55 @@
 .whats-new-btn:hover {
   background: #4752c4;
 }
+
+/* Text Formatting Styles */
+.msg-h1 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 4px 0;
+  color: var(--header-primary, #ffffff);
+}
+
+.msg-h2 {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin: 4px 0;
+  color: var(--header-primary, #ffffff);
+}
+
+.msg-h3 {
+  font-size: 1em;
+  font-weight: 700;
+  margin: 2px 0;
+  color: var(--header-primary, #ffffff);
+}
+
+.msg-subtext {
+  font-size: 0.8em;
+  color: var(--text-muted, #949ba4);
+  display: block;
+}
+
+.msg-quote,
+.msg-quote-multi {
+  border-left: 4px solid #4e5058;
+  padding-left: 10px;
+  margin: 4px 0;
+  color: var(--interactive-hover, #dbdee1);
+  display: block;
+}
+
+.msg-bullet,
+.msg-number {
+  padding-left: 8px;
+  margin: 2px 0;
+}
+
+.msg-inline-code {
+  background-color: #2b2d31;
+  color: #eb459e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
