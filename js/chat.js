@@ -541,7 +541,7 @@ window.switchToContext = function switchToContext(type, targetUser = null) {
 
     if (type === 'server') {
       // 🎲 1 in 20 (5%) chance to show the secret Egg Room
-      if (Math.floor(Math.random() * 100) === 0) {
+      if (Math.floor(Math.random() * 243894538289239493290920) === 0) {
         showEggRoom();
       }
 
