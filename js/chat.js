@@ -5,12 +5,12 @@
   window.currentUser = null;
   window.currentProfile = null;
   
-  // Default to 'server' so old channel messages load on page refresh/login
+  // Default to main server on load
   window.currentContext = { type: 'server', targetId: 'main-server', name: 'Main Server' };
   window.allProfiles = [];
   window.chatChannel = null;
 
-  // Helper to format timestamps like Discord
+  // Helper to format timestamps like Discord (Today at 3:45 PM, Yesterday at..., etc.)
   function formatDiscordTimestamp(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -155,25 +155,26 @@
     });
   }
 
-  // 1. Get the word currently being typed after the @ symbol
+  // Detect query after `@` symbol
   function getMentionQuery(text = '') {
     const match = text.match(/@([a-zA-Z0-9_]*)$/);
     return match ? match[1].toLowerCase() : null;
   }
 
-  // 2. Hide Picker
   function hideMentionSuggestions() {
     const picker = document.getElementById('mention-picker');
-    if (picker) picker.hidden = true;
+    if (picker) {
+      picker.innerHTML = '';
+      picker.hidden = true;
+    }
   }
 
-  // 3. Render the Picker when typing
+  // Render Mention Suggestions dropdown
   function renderMentionSuggestions(text = '') {
     const picker = document.getElementById('mention-picker');
     if (!picker) return;
 
     const query = getMentionQuery(text);
-    
     if (query === null) {
       hideMentionSuggestions();
       return;
@@ -189,7 +190,7 @@
         };
       })
       .filter((p) => p.handle.toLowerCase().includes(query))
-      .slice(0, 5); 
+      .slice(0, 5);
 
     if (suggestions.length === 0) {
       hideMentionSuggestions();
@@ -219,14 +220,16 @@
     picker.hidden = false;
   }
 
-  // Handle @ ping mentions directly mapping to user profiles
   function isMessageMentionedForCurrentUser(message) {
-    if (!message || !window.currentUser || !window.currentProfile) return false;
+    if (!message || !window.currentUser) return false;
     
-    const myRawName = window.currentProfile.display_name || window.currentUser.email.split('@')[0];
-    const myHandle = `@${myRawName.replace(/\s+/g, '')}`.toLowerCase();
-    
-    return message.content.toLowerCase().includes(myHandle);
+    const myName = window.currentProfile?.display_name || window.currentUser?.email?.split('@')[0] || '';
+    if (!myName) return false;
+
+    const myHandle = `@${myName.replace(/\s+/g, '')}`.toLowerCase();
+    const content = (message.content || '').toLowerCase();
+
+    return content.includes(myHandle) || content.includes(`@(${myName.toLowerCase()})`);
   }
 
   function updateTypingUI() {
@@ -245,7 +248,6 @@
     }
   }
 
-  // 4. Update handleTypingInput to trigger the picker
   window.handleTypingInput = function handleTypingInput() {
     const input = document.getElementById('msg-input');
     renderMentionSuggestions(input?.value || '');
@@ -446,7 +448,6 @@
     }
 
     if (messages && messages.length > 0) {
-      // FIX: Added 'renderMessage' here inside forEach
       messages.forEach(renderMessage);
     } else {
       console.log('No messages found for current context.');
@@ -459,7 +460,7 @@
 
     const div = document.createElement('div');
     
-    // FIX: Single declaration for shouldHighlight and ping check
+    // Check if current user was mentioned in this message
     const shouldHighlight = isMessageMentionedForCurrentUser(msg) && msg.sender_id !== window.currentUser?.id;
     div.className = shouldHighlight ? 'msg msg-mentioned' : 'msg';
 
@@ -479,8 +480,11 @@
     const plainTextContent = typeof window.censorContent === 'function' ? window.censorContent(rawText) : rawText;
     const formattedContent = typeof window.parseEmotes === 'function' ? window.parseEmotes(plainTextContent) : plainTextContent;
     
-    // Turn the @Username handle in text into the blue UI chip
-    const highlightedContent = formattedContent.replace(/@([a-zA-Z0-9_]+)/g, '<span class="mention-chip">$&</span>');
+    // Convert mentions to mention chips
+    const highlightedContent = formattedContent
+      .replace(/@\(([^)]+)\)/g, '<span class="mention-chip">@$1</span>')
+      .replace(/@([a-zA-Z0-9_]+)/g, '<span class="mention-chip">@$1</span>');
+
     const attachmentMarkup = renderAttachmentMarkup(attachment);
 
     div.innerHTML = `
@@ -501,6 +505,40 @@
   }
 
   window.renderMessage = renderMessage;
+
+  window.handleFileUpload = async function handleFileUpload(event) {
+    const input = event?.target;
+    const file = input?.files?.[0];
+
+    if (!file || !window.currentUser) {
+      if (!window.currentUser) {
+        alert('Please sign in before uploading a file.');
+      }
+      return;
+    }
+
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Unable to read selected file.'));
+        reader.readAsDataURL(file);
+      });
+
+      const attachment = {
+        type: file.type || 'application/octet-stream',
+        name: file.name || 'attachment',
+        dataUrl
+      };
+
+      await window.sendMessage(attachment);
+    } catch (error) {
+      console.error('Failed to upload attachment:', error);
+      alert('Unable to attach this file right now.');
+    } finally {
+      if (input) input.value = '';
+    }
+  };
 
   window.sendMessage = async function sendMessage(attachment = null) {
     const input = document.getElementById('msg-input');
@@ -547,7 +585,7 @@
   };
 })();
 
-// Censor filter helpers globally registered
+// Censor Filter Helpers
 const FLAGGED_WORDS = ['gaster', 'green', 'WDGaster'];
 
 function escapeRegExp(string) {
