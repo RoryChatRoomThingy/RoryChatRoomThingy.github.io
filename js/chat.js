@@ -4,9 +4,37 @@
 
   window.currentUser = null;
   window.currentProfile = null;
+  
+  // FIX: Default to 'server' so old channel messages load on page refresh/login
   window.currentContext = { type: 'server', targetId: 'main-server', name: 'Main Server' };
   window.allProfiles = [];
   window.chatChannel = null;
+
+  // Helper to format timestamps like Discord (Today at 3:45 PM, Yesterday at..., etc.)
+  function formatDiscordTimestamp(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+    const timeStr = date.toLocaleTimeString([], timeOptions);
+
+    if (msgDate.getTime() === today.getTime()) {
+      return `Today at ${timeStr}`;
+    } else if (msgDate.getTime() === yesterday.getTime()) {
+      return `Yesterday at ${timeStr}`;
+    } else {
+      const dateStr = date.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' });
+      return `${dateStr} ${timeStr}`;
+    }
+  }
 
   function resolveAvatarUrl(url) {
     const fallback = 'assets/icons/avatars/user1.png';
@@ -166,67 +194,6 @@
     }
   }
 
-  function getMentionQuery(text = '') {
-    const match = text.match(/@([A-Za-z0-9_. -]*)$/);
-    return match ? match[1] : '';
-  }
-
-  function renderMentionSuggestions(text = '') {
-    const picker = document.getElementById('mention-picker');
-    if (!picker) return;
-
-    const query = getMentionQuery(text);
-    const shouldShow = text.endsWith('@') || query.length > 0;
-    if (!shouldShow) {
-      hideMentionSuggestions();
-      return;
-    }
-
-    const suggestions = (window.allProfiles || [])
-      .filter((profile) => profile.id !== window.currentUser?.id)
-      .filter((profile) => {
-        const values = [profile.display_name, profile.email, profile.user_name, profile.full_name].filter(Boolean);
-        const normalizedQuery = normalizeMentionValue(query);
-        return values.some((value) => {
-          const normalizedValue = normalizeMentionValue(value);
-          return !normalizedQuery || normalizedValue.includes(normalizedQuery) || normalizedQuery.includes(normalizedValue);
-        });
-      })
-      .slice(0, 5);
-
-    if (!suggestions.length) {
-      hideMentionSuggestions();
-      return;
-    }
-
-    picker.innerHTML = suggestions.map((profile) => {
-      const label = profile.display_name || profile.email || profile.user_name || 'User';
-      return `<button class="mention-option" type="button" data-user-id="${profile.id}" data-user-name="${label}">${label}</button>`;
-    }).join('');
-
-    picker.querySelectorAll('.mention-option').forEach((option) => {
-      option.addEventListener('click', () => {
-        if (option.dataset.userId) {
-          const input = document.getElementById('msg-input');
-          if (input) {
-            const existing = input.value;
-            const match = existing.match(/@([A-Za-z0-9_. -]*)$/);
-            const before = match ? existing.slice(0, match.index) : existing;
-            const after = match ? existing.slice(match.index + match[0].length) : '';
-            const mentionText = `@(${option.dataset.userName || 'User'})`;
-            input.value = `${before}${mentionText}${after}`;
-            input.dispatchEvent(new Event('input'));
-            input.focus();
-            input.setSelectionRange(input.value.length, input.value.length);
-          }
-        }
-        hideMentionSuggestions();
-      });
-    });
-
-    picker.hidden = false;
-  }
-
   function isMessageMentionedForCurrentUser(message) {
     if (!message || !window.currentUser) return false;
     const mentionedUsers = getMentionedUsers(message.content || '');
@@ -250,9 +217,6 @@
   }
 
   window.handleTypingInput = function handleTypingInput() {
-    const input = document.getElementById('msg-input');
-    renderMentionSuggestions(input?.value || '');
-
     if (!window.chatChannel || !window.currentUser) return;
 
     window.chatChannel.send({
@@ -424,7 +388,7 @@
     let query = window.supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
 
     if (window.currentContext.type === 'server') {
-      // Fetch server messages including old ones where is_dm is null
+      // FIX: Fetch server channel messages + older messages where is_dm is null
       query = query.or('is_dm.eq.false,is_dm.is.null');
     } else if (!window.currentContext.targetId) {
       const emptyState = document.createElement('div');
@@ -464,13 +428,12 @@
     const displayName = msg.display_name || msg.sender_email || 'User';
     const attachment = parseAttachment(msg.content || '');
     
-    // 1. Get plain text
+    // Format Discord timestamp
+    const timestampStr = formatDiscordTimestamp(msg.created_at);
+
+    // Filter text & emotes
     const rawText = stripAttachmentFromContent(msg.content || '');
-    
-    // 2. Run through the censor filter
     const plainTextContent = typeof window.censorContent === 'function' ? window.censorContent(rawText) : rawText;
-    
-    // 3. Parse emotes & mentions
     const formattedContent = typeof window.parseEmotes === 'function' ? window.parseEmotes(plainTextContent) : plainTextContent;
     const highlightedContent = formattedContent.replace(/@\(([^)]+)\)/g, '<span class="mention-chip">$&</span>');
     const attachmentMarkup = renderAttachmentMarkup(attachment);
@@ -478,7 +441,10 @@
     div.innerHTML = `
       <img class="msg-avatar" src="${cleanAvatarUrl}" alt="pfp" onerror="this.onerror=null; this.src='assets/icons/avatars/user1.png'" />
       <div class="msg-content">
-        <div class="msg-user">${escapeHtml(displayName)}</div>
+        <div class="msg-header">
+          <span class="msg-user">${escapeHtml(displayName)}</span>
+          <span class="msg-timestamp">${timestampStr}</span>
+        </div>
         ${highlightedContent ? `<div class="msg-text">${highlightedContent}</div>` : ''}
         ${attachmentMarkup ? `<div class="msg-attachment-wrap">${attachmentMarkup}</div>` : ''}
       </div>
@@ -490,38 +456,6 @@
   }
 
   window.renderMessage = renderMessage;
-
-  window.handleFileUpload = async function handleFileUpload(event) {
-    const input = event?.target;
-    const file = input?.files?.[0];
-
-    if (!file || !window.currentUser) {
-      if (!window.currentUser) alert('Please sign in before uploading a file.');
-      return;
-    }
-
-    try {
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('Unable to read selected file.'));
-        reader.readAsDataURL(file);
-      });
-
-      const attachment = {
-        type: file.type || 'application/octet-stream',
-        name: file.name || 'attachment',
-        dataUrl
-      };
-
-      await window.sendMessage(attachment);
-    } catch (error) {
-      console.error('Failed to upload attachment:', error);
-      alert('Unable to attach this file right now.');
-    } finally {
-      if (input) input.value = '';
-    }
-  };
 
   window.sendMessage = async function sendMessage(attachment = null) {
     const input = document.getElementById('msg-input');
