@@ -1,3 +1,6 @@
+/* ==========================================================================
+   1. NAVIGATION & USER LIST
+   ========================================================================== */
 .nav-item {
   padding: 8px;
   border-radius: 4px;
@@ -29,6 +32,10 @@
   object-fit: cover;
 }
 
+
+/* ==========================================================================
+   2. MESSAGES (BASE & HEADERS)
+   ========================================================================== */
 .msg {
   display: flex;
   align-items: flex-start;
@@ -56,11 +63,23 @@
   flex-direction: column;
 }
 
+.msg-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
 .msg-user {
   font-size: 15px;
   color: var(--header-primary);
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.msg-timestamp {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
 }
 
 .msg-text {
@@ -70,31 +89,40 @@
   word-break: break-word;
 }
 
+
+/* ==========================================================================
+   3. PINGS & MENTIONS (BLUE TAGS + YELLOW MESSAGE BLOCK)
+   ========================================================================== */
+/* Yellow Client-side Highlight Box */
 .msg-mentioned {
-  background: rgba(246, 224, 94, 0.2);
-  border-left: 3px solid #f6d55c;
-  border-radius: 6px;
+  background: rgba(240, 178, 50, 0.15);
+  border-left: 3px solid #f0b232;
+  border-radius: 0 4px 4px 0;
 }
 
+.msg-mentioned:hover {
+  background: rgba(240, 178, 50, 0.2);
+}
+
+/* Discord Blue Ping (@user) Tags */
+.mention,
 .mention-chip {
-  background: #ffe066;
-  color: #2f2a16;
-  padding: 0 0.3em;
-  border-radius: 4px;
-  font-weight: 700;
+  background-color: rgba(88, 101, 242, 0.3);
+  color: #c9cdfb;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease;
 }
 
-.input-area {
-  background: var(--channeltextarea-bg);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  min-height: 44px;
-  gap: 8px;
-  position: relative;
+.mention:hover,
+.mention-chip:hover {
+  background-color: #5865f2;
+  color: #ffffff;
 }
 
+/* Mention Picker Popover */
 .mention-picker {
   position: absolute;
   left: 0;
@@ -124,6 +152,21 @@
   background: var(--bg-modifier-hover);
 }
 
+
+/* ==========================================================================
+   4. CHAT INPUT & BUTTONS
+   ========================================================================== */
+.input-area {
+  background: var(--channeltextarea-bg);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  min-height: 44px;
+  gap: 8px;
+  position: relative;
+}
+
 .input-area input {
   flex: 1;
   background: transparent;
@@ -134,6 +177,7 @@
   padding: 11px 0;
 }
 
+.file-upload-btn,
 .audio-toggle-btn,
 .emote-toggle-btn {
   background: transparent;
@@ -143,52 +187,84 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
-  transition: color 0.15s ease;
+  padding: 6px;
+  border-radius: 50%;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
+.file-upload-btn:hover,
 .audio-toggle-btn:hover,
 .emote-toggle-btn:hover {
   color: var(--interactive-hover);
+  background: var(--bg-modifier-hover);
 }
 
-.audio-picker-popover {
-  position: absolute;
-  bottom: 80px;
-  right: 16px;
+.typing-indicator {
+  height: 24px;
+  font-size: 13px;
+  color: var(--text-normal);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+
+/* ==========================================================================
+   5. ATTACHMENTS & MEDIA PLAYERS
+   ========================================================================== */
+.msg-attachment-wrap {
+  margin-top: 8px;
+}
+
+.msg-attachment-img {
+  max-width: 320px;
+  max-height: 240px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+}
+
+.msg-attachment-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background: var(--bg-secondary);
   border: 1px solid var(--bg-tertiary);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  padding: 12px;
-  width: 320px;
-  max-height: 280px;
-  overflow-y: auto;
-  display: none;
-  z-index: 100;
-}
-
-.audio-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-.audio-grid-item {
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--bg-primary);
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-decoration: none;
   color: var(--header-primary);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  font-size: 14px;
+  transition: background 0.15s ease;
 }
 
-.audio-grid-item:hover {
+.msg-attachment-file:hover {
   background: var(--bg-modifier-hover);
-  transform: translateX(2px);
 }
 
+.msg-attachment-audio {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--brand-experiment);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.msg-attachment-audio:hover {
+  transform: scale(1.04);
+}
+
+
+/* ==========================================================================
+   6. EMOTES & GIF PICKER
+   ========================================================================== */
 .chat-emote {
   height: 64px;
   width: auto;
@@ -196,7 +272,6 @@
   border-radius: 4px;
 }
 
-/* Emote Picker Container */
 .emote-picker-popover {
   position: absolute;
   bottom: 80px;
@@ -211,7 +286,6 @@
   z-index: 100;
 }
 
-/* Emote Picker Header & Title */
 .emote-picker-header {
   display: flex;
   justify-content: space-between;
@@ -230,7 +304,7 @@
 .close-picker-btn {
   background: transparent;
   border: none;
-  color: var(--text-muted, #949BA4);
+  color: var(--text-muted, #949ba4);
   cursor: pointer;
   font-size: 16px;
   font-weight: bold;
@@ -241,10 +315,9 @@
 }
 
 .close-picker-btn:hover {
-  color: var(--text-normal, #DBDEE1);
+  color: var(--text-normal, #dbdee1);
 }
 
-/* Scrollable Emote Grid */
 .emote-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -286,15 +359,51 @@
   object-fit: contain;
 }
 
-.typing-indicator {
-  height: 24px;
-  font-size: 13px;
-  color: var(--text-normal);
-  font-weight: 600;
-  display: flex;
-  align-items: center;
+
+/* ==========================================================================
+   7. AUDIO PICKER
+   ========================================================================== */
+.audio-picker-popover {
+  position: absolute;
+  bottom: 80px;
+  right: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  width: 320px;
+  max-height: 280px;
+  overflow-y: auto;
+  display: none;
+  z-index: 100;
 }
 
+.audio-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.audio-grid-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--header-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.audio-grid-item:hover {
+  background: var(--bg-modifier-hover);
+  transform: translateX(2px);
+}
+
+
+/* ==========================================================================
+   8. AUTHENTICATION SCREEN
+   ========================================================================== */
 #auth-screen {
   position: absolute;
   top: 50%;
@@ -346,94 +455,12 @@
 }
 
 #auth-screen button:hover {
-  background: #4752C4;
+  background: #4752c4;
 }
 
-/* Discord Blue Ping (Mention) Styling */
-.mention {
-  background-color: rgba(88, 101, 242, 0.3);
-  color: #c9cdfb;
-  padding: 0 4px;
-  border-radius: 3px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.1s ease, color 0.1s ease;
-}
-
-.mention:hover {
-  background-color: #5865F2;
-  color: #ffffff;
-}
-
-/* File Upload Button & Attachment Styling */
-.file-upload-btn {
-  background: transparent;
-  color: var(--interactive-normal);
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border-radius: 50%;
-  transition: color 0.15s ease, background 0.15s ease;
-}
-
-.file-upload-btn:hover {
-  color: var(--interactive-hover);
-  background: var(--bg-modifier-hover);
-}
-
-.msg-attachment-wrap {
-  margin-top: 8px;
-}
-
-.msg-attachment-img {
-  max-width: 320px;
-  max-height: 240px;
-  border-radius: 8px;
-  object-fit: cover;
-  display: block;
-}
-
-.msg-attachment-file {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--bg-tertiary);
-  padding: 8px 12px;
-  border-radius: 6px;
-  text-decoration: none;
-  color: var(--header-primary);
-  font-size: 14px;
-  transition: background 0.15s ease;
-}
-
-.msg-attachment-file:hover {
-  background: var(--bg-modifier-hover);
-}
-
-.msg-attachment-audio {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border: none;
-  border-radius: 50%;
-  background: var(--brand-experiment);
-  color: #fff;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.msg-attachment-audio:hover {
-  transform: scale(1.04);
-}
 
 /* ==========================================================================
-   WHAT'S NEW MODAL POPUP
+   9. WHAT'S NEW MODAL POPUP
    ========================================================================== */
 .modal-overlay {
   position: fixed;
@@ -495,15 +522,16 @@
 
 .whats-new-banner img {
   width: 100%;
+  height: 180px;
+  object-fit: cover;
   border-radius: 6px;
   margin-bottom: 16px;
-  object-fit: cover;
 }
 
 .whats-new-subtitle {
   font-size: 12px;
   font-weight: 700;
-  color: #23a55a; /* Accent green title */
+  color: #23a55a;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 12px;
@@ -542,32 +570,4 @@
 
 .whats-new-btn:hover {
   background: #4752c4;
-}
-
-.whats-new-banner img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover; /* Prevents stretching */
-  border-radius: 6px;
-  margin-bottom: 16px;
-}
-
-/* Discord Message Header & Timestamp */
-.msg-header {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-
-.msg-user {
-  font-weight: 600;
-  color: var(--header-primary);
-  font-size: 15px;
-}
-
-.msg-timestamp {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 400;
 }
