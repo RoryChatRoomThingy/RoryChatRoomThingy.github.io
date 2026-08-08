@@ -655,6 +655,9 @@ window.switchToContext = function switchToContext(type, targetUser = null) {
   /* ==========================================================================
    File Upload Handler (Images & Sound Support)
    ========================================================================== */
+/* ==========================================================================
+   Universal File Upload Handler (Supports ALL Image & Audio Formats)
+   ========================================================================== */
 window.handleFileUpload = function handleFileUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -665,18 +668,35 @@ window.handleFileUpload = function handleFileUpload(event) {
     const fileUrl = e.target.result;
     let contentHtml = '';
 
-    if (file.type.startsWith('image/')) {
-      // 🖼️ Image output
+    // Get file extension
+    const extension = file.name.split('.').pop().toLowerCase();
+
+    // List of supported audio extensions
+    const audioExtensions = ['mp3', 'ogg', 'wav', 'm4a', 'aac', 'flac', 'opus', 'webm', 'wma', 'oga'];
+
+    // Check if file is image or audio
+    const isImage = file.type.startsWith('image/');
+    const isAudio = file.type.startsWith('audio/') || audioExtensions.includes(extension);
+
+    if (isImage) {
+      // 🖼️ Image player
       contentHtml = `<img src="${fileUrl}" alt="${file.name}" style="max-width: 280px; max-height: 280px; border-radius: 8px; margin-top: 6px; display: block;" />`;
-    } else if (file.type.startsWith('audio/')) {
-      // 🎵 Sound/Audio output with play button controls
-      contentHtml = `<audio controls src="${fileUrl}" style="margin-top: 6px; max-width: 280px; width: 100%;"></audio>`;
+    } else if (isAudio) {
+      // 🎵 Playable audio bar for ALL audio formats (.ogg, .wav, .mp3, .m4a, etc.)
+      contentHtml = `
+        <div style="margin-top: 6px; background: rgba(0, 0, 0, 0.2); padding: 8px 12px; border-radius: 8px; max-width: 320px; border: 1px solid rgba(255, 255, 255, 0.05);">
+          <div style="font-size: 12px; color: #b5bac1; margin-bottom: 6px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            🎵 ${file.name}
+          </div>
+          <audio controls src="${fileUrl}" style="width: 100%; height: 36px; outline: none; display: block;"></audio>
+        </div>
+      `;
     } else {
-      // 📎 Generic file fallback
-      contentHtml = `<a href="${fileUrl}" download="${file.name}" style="color: #5865F2; text-decoration: underline;">📎 ${file.name}</a>`;
+      // 📎 Non-media file fallback
+      contentHtml = `<a href="${fileUrl}" download="${file.name}" style="color: #5865F2; text-decoration: underline; margin-top: 6px; display: inline-block;">📎 ${file.name}</a>`;
     }
 
-    // Automatically send or insert into chat
+    // Automatically send or append into message input
     if (typeof window.sendMessage === 'function') {
       window.sendMessage(contentHtml);
     } else {
@@ -686,7 +706,7 @@ window.handleFileUpload = function handleFileUpload(event) {
       }
     }
 
-    // Reset input so users can re-select the same file if needed
+    // Reset input so same file can be uploaded again
     event.target.value = '';
   };
 
