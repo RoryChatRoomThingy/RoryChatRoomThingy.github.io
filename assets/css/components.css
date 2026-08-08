@@ -551,3 +551,23 @@
   border-radius: 6px;
   margin-bottom: 16px;
 }
+
+/* Discord Message Header & Timestamp */
+.msg-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.msg-user {
+  font-weight: 600;
+  color: var(--header-primary);
+  font-size: 15px;
+}
+
+.msg-timestamp {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
