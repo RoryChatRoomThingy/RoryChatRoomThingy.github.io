@@ -381,32 +381,46 @@
   };
 
   window.loadMessages = async function loadMessages() {
-    const list = document.getElementById('messages-list');
-    if (!list) return;
-    list.innerHTML = '';
+  const list = document.getElementById('messages-list');
+  if (!list) return;
+  list.innerHTML = '';
 
-    let query = window.supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
+  let query = window.supabaseClient.from('messages').select('*').order('created_at', { ascending: true });
 
-    if (window.currentContext.type === 'server') {
-      // FIX: Fetch server channel messages + older messages where is_dm is null
-      query = query.or('is_dm.eq.false,is_dm.is.null');
-    } else if (!window.currentContext.targetId) {
-      const emptyState = document.createElement('div');
-      emptyState.className = 'empty-state';
-      emptyState.textContent = 'Select a direct message to start chatting.';
-      list.appendChild(emptyState);
-      return;
-    } else {
-      query = query.eq('is_dm', true).or(`and(sender_id.eq.${window.currentUser.id},receiver_id.eq.${window.currentContext.targetId}),and(sender_id.eq.${window.currentContext.targetId},receiver_id.eq.${window.currentUser.id})`);
-    }
-
-    const { data: messages, error } = await query;
-    if (error) {
-      console.error('Error loading messages:', error);
+  if (window.currentContext.type === 'server') {
+    // Include both explicitly non-DM messages and old legacy messages where is_dm is NULL
+    query = query.or('is_dm.eq.false,is_dm.is.null');
+  } else if (!window.currentContext.targetId) {
+    const emptyState = document.createElement('div');
+    emptyState.className = 'empty-state';
+    emptyState.textContent = 'Select a direct message to start chatting.';
+    list.appendChild(emptyState);
+    return;
+  } else {
+    // Check that currentUser exists before querying DM messages
+    if (!window.currentUser?.id) {
+      console.warn('Cannot load DM messages: Current user is not defined.');
       return;
     }
-    if (messages) messages.forEach(renderMessage);
-  };
+    const myId = window.currentUser.id;
+    const targetId = window.currentContext.targetId;
+    query = query.eq('is_dm', true).or(`and(sender_id.eq.${myId},receiver_id.eq.${targetId}),and(sender_id.eq.${targetId},receiver_id.eq.${myId})`);
+  }
+
+  // Destructure both data and error to diagnose issues
+  const { data: messages, error } = await query;
+
+  if (error) {
+    console.error('Error fetching messages from Supabase:', error);
+    return;
+  }
+
+  if (messages && messages.length > 0) {
+    messages.forEach(renderMessage);
+  } else {
+    console.log('No messages found for current context.');
+  }
+};
 
   function renderMessage(msg) {
     const list = document.getElementById('messages-list');
