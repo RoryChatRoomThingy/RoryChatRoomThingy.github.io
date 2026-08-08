@@ -155,43 +155,74 @@
     });
   }
 
-  function getMentionedUsers(text = '') {
-    if (!text || !window.allProfiles?.length) return [];
-
-    const mentions = [];
-    const seenIds = new Set();
-    const regex = /@\(([^)]+)\)/g;
-
-    for (const match of text.matchAll(regex)) {
-      const candidateName = match[1].trim();
-      if (!candidateName) continue;
-
-      const normalizedCandidate = normalizeMentionValue(candidateName);
-      const matchedProfile = window.allProfiles.find((profile) => {
-        const values = [profile.display_name, profile.email, profile.user_name, profile.full_name].filter(Boolean);
-        return values.some((value) => {
-          const normalizedValue = normalizeMentionValue(value);
-          return normalizedValue === normalizedCandidate ||
-            normalizedValue.includes(normalizedCandidate) ||
-            normalizedCandidate.includes(normalizedValue);
-        });
-      });
-
-      if (matchedProfile && !seenIds.has(matchedProfile.id)) {
-        mentions.push(matchedProfile);
-        seenIds.add(matchedProfile.id);
-      }
-    }
-
-    return mentions;
+// 1. Get the word currently being typed after the @ symbol
+  function getMentionQuery(text = '') {
+    // Matches @ followed by letters/numbers at the very end of the text input
+    const match = text.match(/@([a-zA-Z0-9_]*)$/);
+    return match ? match[1].toLowerCase() : null;
   }
 
+// 2. Hide Picker
   function hideMentionSuggestions() {
     const picker = document.getElementById('mention-picker');
-    if (picker) {
-      picker.innerHTML = '';
-      picker.hidden = true;
+    if (picker) picker.hidden = true;
+  }
+
+  // 3. Render the Picker when typing
+  function renderMentionSuggestions(text = '') {
+    const picker = document.getElementById('mention-picker');
+    if (!picker) return;
+
+    const query = getMentionQuery(text);
+    
+    // If no @ symbol is actively being typed, hide and stop
+    if (query === null) {
+      hideMentionSuggestions();
+      return;
     }
+
+    // Create a "handle" (no spaces) for each user to search against
+    const suggestions = (window.allProfiles || [])
+      .filter((p) => p.id !== window.currentUser?.id)
+      .map((p) => {
+        const rawName = p.display_name || p.email.split('@')[0] || 'User';
+        return {
+          ...p,
+          handle: rawName.replace(/\s+/g, '') // Removes spaces
+        };
+      })
+      .filter((p) => p.handle.toLowerCase().includes(query))
+      .slice(0, 5); // Show top 5 max
+
+    if (suggestions.length === 0) {
+      hideMentionSuggestions();
+      return;
+    }
+
+    // Build the dropdown buttons
+    picker.innerHTML = suggestions.map((p) => {
+      return `<button class="mention-option" type="button" data-handle="${p.handle}">@${p.handle}</button>`;
+    }).join('');
+
+    // Add click events to the dropdown buttons
+    picker.querySelectorAll('.mention-option').forEach((option) => {
+      option.addEventListener('click', () => {
+        const input = document.getElementById('msg-input');
+        if (input) {
+          const existing = input.value;
+          const match = existing.match(/@([a-zA-Z0-9_]*)$/);
+          if (match) {
+            // Replace the partial @typing with the full @Username
+            const before = existing.slice(0, match.index);
+            input.value = `${before}@${option.dataset.handle} `;
+            input.focus();
+          }
+        }
+        hideMentionSuggestions();
+      });
+    });
+
+    picker.hidden = false;
   }
 
   function isMessageMentionedForCurrentUser(message) {
@@ -216,7 +247,11 @@
     }
   }
 
+// 4. Update handleTypingInput to trigger the picker
   window.handleTypingInput = function handleTypingInput() {
+    const input = document.getElementById('msg-input');
+    renderMentionSuggestions(input?.value || '');
+
     if (!window.chatChannel || !window.currentUser) return;
 
     window.chatChannel.send({
@@ -416,7 +451,7 @@
   }
 
   if (messages && messages.length > 0) {
-    messages.forEach(renderMessage);
+    messages.forEach();
   } else {
     console.log('No messages found for current context.');
   }
@@ -467,6 +502,17 @@
     list.appendChild(div);
     attachAudioAttachmentHandlers();
     list.scrollTop = list.scrollHeight;
+
+    // Look for this part inside renderMessage(msg) { ... }
+  const shouldHighlight = isMessageMentionedForCurrentUser(msg) && msg.sender_id !== window.currentUser?.id;
+  div.className = shouldHighlight ? 'msg msg-mentioned' : 'msg';
+
+  // Play sound if highlighted!
+  if (shouldHighlight) {
+    if (typeof window.playSoundEffect === 'function') {
+      window.playSoundEffect('ping');
+    }
+  }
   }
 
   window.renderMessage = renderMessage;
