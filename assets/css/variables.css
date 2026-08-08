@@ -1,19 +1,30 @@
 :root {
+  /* Core Backgrounds */
   --bg-tertiary: #1E1F22;
   --bg-secondary: #2B2D31;
   --bg-primary: #313338;
+  
+  /* Messages & Inputs */
   --bg-message-hover: #2E3035;
   --channeltextarea-bg: #383A40;
+  
+  /* Text Colors */
   --text-normal: #DBDEE1;
   --text-muted: #949BA4;
   --header-primary: #F2F3F5;
+  
+  /* Buttons & Interactions */
   --interactive-normal: #B5BAC1;
   --interactive-hover: #DBDEE1;
   --interactive-active: #FFFFFF;
   --bg-modifier-hover: rgba(78, 80, 88, 0.3);
   --bg-modifier-active: rgba(78, 80, 88, 0.6);
-  --brand-experiment: #5865F2;
+  
+  /* Brand Colors & Mentions */
+  --brand-experiment: #5865F2; /* Discord Blue */
   --danger: #DA373C;
+  --mention-bg: rgba(240, 178, 50, 0.15); /* Yellow message block */
+  --mention-border: #f0b232; /* Yellow left border */
 }
 
 * {
